@@ -1,5 +1,5 @@
 AS = as
-ASFLAGS = -march=i686 -m32
+ASFLAGS = -march=i686 --32
 CC = gcc
 CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Wall -Wextra
 LD = ld
@@ -18,7 +18,7 @@ kernel.iso: multiboot.bin
 	grub-mkrescue -o $@ $(ISODIR)
 	rm -rf $(ISODIR)
 
-multiboot.bin: multiboot.o main.o
+multiboot.bin: multiboot.o main.o vga.o
 	$(LD) $(LDFLAGS) -T multiboot.ld -o $@ $^
 
 multiboot.o: multiboot.s
@@ -27,6 +27,13 @@ multiboot.o: multiboot.s
 main.o: main.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
+vga.o: vga.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
 .PHONY: clean
 clean:
-	rm -f multiboot.o main.o
+	rm -f multiboot.o main.o vga.o multiboot.bin kernel.iso
+
+.PHONY: test
+test: kernel.iso
+	qemu-system-i386 -cdrom $<
