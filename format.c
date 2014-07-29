@@ -3,35 +3,58 @@
 static inline
 char digit_to_ascii (uint_fast8_t digit)
 {
-	return digit + '0';
+	if (digit < 10)
+		return digit + '0';
+	else
+		return (digit - 10) + 'A';
+}
+
+static inline
+void creverse (char* begin, char* end)
+{
+	if (begin == end)
+		return;
+	--end;
+
+	while (begin < end) {
+		char tmp = *begin;
+		*begin = *end;
+		*end = tmp;
+		++begin;
+		--end;
+	}
 }
 
 
 // Extern functions
 
-char* format_int32_t (char buffer [static 12], int32_t value)
+char* format_int32_t (char* buffer, int32_t value, uint_fast8_t mincol, uint_fast8_t base)
 {
 	if (value < 0) {
-		char* numstring = format_uint32_t (buffer + 1, -value);
+		char* numstring = format_uint32_t (buffer + 1, -value, mincol, base);
 		--numstring;
 		numstring [0] = '-';
 		return numstring;
 	}
 	else
-		return format_uint32_t (buffer + 1, value);
+		return format_uint32_t (buffer + 1, value, mincol, base);
 }
 
-char* format_uint32_t (char buffer [static 11], uint32_t value)
+char* format_uint32_t (char* buffer, uint32_t value, uint_fast8_t mincol, uint_fast8_t base)
 {
-	char* numstring = buffer + 10;
-	numstring [0] = '\0';
+	char* cursor = buffer;
 
 	do {
-		--numstring;
-		*numstring = digit_to_ascii (value % 10);
-		value /= 10;
+		*cursor = digit_to_ascii (value % base);
+		value /= base;
+		++cursor;
 	}
 	while (value != 0);
 
-	return numstring;
+	while (cursor < buffer + mincol)
+		*cursor++ = '0';
+	creverse (buffer, cursor);
+	*cursor = '\0';
+
+	return buffer;
 }

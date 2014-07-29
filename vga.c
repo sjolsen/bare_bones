@@ -3,9 +3,9 @@
 #define VGA_BASE 0xB8000
 #define vga_buffer (*(volatile uint16_t (*) [VGA_HEIGHT] [VGA_WIDTH]) VGA_BASE)
 
-size_t current_row;
-size_t current_column;
-vga_color current_color;
+size_t vga_current_row;
+size_t vga_current_column;
+vga_color vga_current_color;
 
 static inline
 size_t strlen (const char* str)
@@ -25,17 +25,17 @@ void vga_putraw (char c, vga_color color, size_t col, size_t row)
 static inline
 void vga_advance_line (void)
 {
-	current_column = 0;
-	if (++current_row == VGA_HEIGHT)
-		current_row = 0;
+	vga_current_column = 0;
+	if (++vga_current_row == VGA_HEIGHT)
+		vga_current_row = 0;
 }
 
 static inline
 void vga_advance_char (void)
 {
-	if (++current_column == VGA_WIDTH)
+	if (++vga_current_column == VGA_WIDTH)
 	{
-		current_column = 0;
+		vga_current_column = 0;
 		vga_advance_line ();
 	}
 }
@@ -45,26 +45,26 @@ void vga_advance_char (void)
 
 void vga_initialize (void)
 {
-	current_row = 0;
-	current_column = 0;
-	current_color = make_vga_color (COLOR_LIGHT_GREY, COLOR_BLACK);
+	vga_current_row = 0;
+	vga_current_column = 0;
+	vga_current_color = make_vga_color (COLOR_LIGHT_GREY, COLOR_BLACK);
 	for (size_t row = 0; row < VGA_HEIGHT; ++row)
 		for (size_t col = 0; col < VGA_WIDTH; ++col)
-			vga_buffer [row] [col] = make_vga_entry (' ', current_color).value;
+			vga_buffer [row] [col] = make_vga_entry (' ', vga_current_color).value;
 }
 
 void vga_setcolor (vga_color color)
 {
-	current_color = color;
+	vga_current_color = color;
 }
 
 void vga_scroll (size_t lines)
 {
 	if (lines == 0)
 		return;
-	if (current_row < lines)
-		lines = current_row;
-	current_row -= lines;
+	if (vga_current_row < lines)
+		lines = vga_current_row;
+	vga_current_row -= lines;
 
 	volatile uint16_t* dst = vga_buffer [0];
 	volatile uint16_t* src = vga_buffer [lines];
@@ -74,7 +74,7 @@ void vga_scroll (size_t lines)
 	while (dst != dst_end)
 		*dst++ = *src++;
 	while (dst != src_end)
-		*dst++ = make_vga_entry (' ', current_color).value;
+		*dst++ = make_vga_entry (' ', vga_current_color).value;
 }
 
 void vga_putchar (char c)
@@ -85,7 +85,7 @@ void vga_putchar (char c)
 		vga_advance_line ();
 		break;
 	default:
-		vga_putraw (c, current_color, current_column, current_row);
+		vga_putraw (c, vga_current_color, vga_current_column, vga_current_row);
 		vga_advance_char ();
 		break;
 	}
