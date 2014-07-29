@@ -60,5 +60,6 @@ void vga_setcolor (vga_color color);
 void vga_scroll (size_t lines);
 void vga_putchar (char c);
 void vga_puts (const char* data);
+void vga_putline (const char* data);
 
 #endif

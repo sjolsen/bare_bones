@@ -1,31 +1,25 @@
 #include "vga.h"
+#include "format.h"
 
-#define ARRAYLEN(a) (sizeof (a) / sizeof (*a))
+static inline
+uint32_t cr0 (void)
+{
+	uint32_t ret;
+	__asm__ ("movl %%cr0, %0" : "=r" (ret));
+	return ret;
+}
 
 void kernel_main (void)
 {
 	vga_initialize ();
 
-	vga_color_code colors [] = {
-		COLOR_RED,
-		COLOR_LIGHT_RED,
-		COLOR_LIGHT_BROWN,
-		COLOR_GREEN,
-		COLOR_CYAN,
-		COLOR_BLUE,
-		COLOR_MAGENTA
-	};
+	char buffer [12];
 
-	for (size_t i = 0; i < ARRAYLEN (colors); ++i) {
-		vga_setcolor (make_vga_color (colors [i], COLOR_BLACK));
-		vga_puts ("Hello, kernel World! This is a very long line.");
-	}
+	vga_puts ("cr0: ");
+	vga_putline (format_uint32_t (buffer, cr0 ()));
 
-	vga_scroll (3);
-	vga_setcolor (make_vga_color (COLOR_WHITE, COLOR_BLACK));
-	vga_puts ("The first line should be green.");
-	vga_putchar ('\n');
+	vga_puts ("INT_MIN: ");
+	vga_putline (format_int32_t (buffer, (int) 0x80000000));
 
-	for (size_t i = 0; i < 512; ++i)
-		vga_putchar ('A' + (i % (1 + 'Z' - 'A')));
+	vga_putline ("System halt");
 }

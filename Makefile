@@ -18,7 +18,7 @@ kernel.iso: multiboot.bin
 	grub-mkrescue -o $@ $(ISODIR)
 	rm -rf $(ISODIR)
 
-multiboot.bin: multiboot.o main.o vga.o
+multiboot.bin: multiboot.o main.o vga.o format.o
 	$(LD) $(LDFLAGS) -T multiboot.ld -o $@ $^
 
 multiboot.o: multiboot.s
@@ -28,6 +28,9 @@ main.o: main.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 vga.o: vga.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+format.o: format.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 .PHONY: clean

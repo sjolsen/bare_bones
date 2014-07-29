@@ -96,5 +96,10 @@ void vga_puts (const char* data)
 	size_t length = strlen (data);
 	for (size_t i = 0; i < length; ++i)
 		vga_putchar (data [i]);
+}
+
+void vga_putline (const char* data)
+{
+	vga_puts (data);
 	vga_putchar ('\n');
 }
