@@ -24,8 +24,10 @@ typedef enum
 	COLOR_WHITE         = 15,
 } vga_color_code;
 
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
+enum {
+	VGA_WIDTH  = 80,
+	VGA_HEIGHT = 25
+};
 
 typedef union {
 	struct {
