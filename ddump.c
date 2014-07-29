@@ -7,7 +7,7 @@ void sanitarily_print_char (char c)
 {
 	if (' ' <= c && c < 127) {
 		vga_color oldcolor = vga_getcolor ();
-		vga_setcolor (make_vga_color (COLOR_WHITE, COLOR_BLACK));
+		vga_setcolor (make_vga_color (COLOR_WHITE, oldcolor.bg));
 		vga_putchar (c);
 		vga_setcolor (oldcolor);
 	}
@@ -26,13 +26,13 @@ ptrdiff_t data_dump_row (uint32_t base, const uint8_t* begin, const uint8_t* end
 	if (begin + 16 < end)
 		end = begin + 16;
 
-	vga_puts (format_uint32_t (print_buffer, base, 8, 16));
+	vga_puts (format_uint (print_buffer, base, 8, 16));
 	vga_putchar (':');
 
 	for (const uint8_t* ptr = begin; ptr != end; ++ptr) {
 		if ((ptr - begin) % 2 == 0)
 			vga_putchar (' ');
-		vga_puts (format_uint32_t (print_buffer, *ptr, 2, 16));
+		vga_puts (format_uint (print_buffer, *ptr, 2, 16));
 	}
 
 	// End of column is ((col * 5 + 1) / 2)

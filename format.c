@@ -28,19 +28,19 @@ void creverse (char* begin, char* end)
 
 // Extern functions
 
-char* format_int32_t (char* buffer, int32_t value, uint_fast8_t mincol, uint_fast8_t base)
+char* format_int (char* buffer, int32_t value, uint_fast8_t mincol, uint_fast8_t base)
 {
 	if (value < 0) {
-		char* numstring = format_uint32_t (buffer + 1, -value, mincol, base);
+		char* numstring = format_uint (buffer + 1, -value, mincol, base);
 		--numstring;
 		numstring [0] = '-';
 		return numstring;
 	}
 	else
-		return format_uint32_t (buffer + 1, value, mincol, base);
+		return format_uint (buffer + 1, value, mincol, base);
 }
 
-char* format_uint32_t (char* buffer, uint32_t value, uint_fast8_t mincol, uint_fast8_t base)
+char* format_uint (char* buffer, uint32_t value, uint_fast8_t mincol, uint_fast8_t base)
 {
 	char* cursor = buffer;
 

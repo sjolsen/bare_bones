@@ -4,41 +4,52 @@
 #include "portio.h"
 #include "ddump.h"
 
+static
+void format_mmap (const multiboot_memory_map_t* mmap)
+{
+	char buffer [9];
+	vga_puts ("0x");
+	vga_puts (format_uint (buffer, mmap->addr >> 32, 8, 16));
+	vga_puts (format_uint (buffer, mmap->addr, 8, 16));
+	vga_puts ("-0x");
+	vga_puts (format_uint (buffer, (mmap->addr + mmap->len - 1) >> 32, 8, 16));
+	vga_puts (format_uint (buffer, (mmap->addr + mmap->len - 1), 8, 16));
+
+	static const char* description [] = {
+		[MULTIBOOT_MEMORY_AVAILABLE]        = " AVAILABLE",
+		[MULTIBOOT_MEMORY_RESERVED]         = " RESREVED",
+		[MULTIBOOT_MEMORY_ACPI_RECLAIMABLE] = " ACPI_RECLAIMABLE",
+		[MULTIBOOT_MEMORY_NVS]              = " NVS",
+		[MULTIBOOT_MEMORY_BADRAM]           = " BADRAM"
+	};
+	vga_putline (description [mmap->type]);
+}
+
+static inline
+const multiboot_memory_map_t* first_memory_map_t (uint32_t addr)
+{
+	return (const multiboot_memory_map_t*) ((uintptr_t) addr);
+}
+
+static inline
+const multiboot_memory_map_t* next_memory_map_t (const multiboot_memory_map_t* mmap)
+{
+	return (const multiboot_memory_map_t*) ((uintptr_t) mmap + mmap->size + 4);
+}
+
 void kernel_main (multiboot_info_t* info, uint32_t magic)
 {
 	vga_initialize ();
 
-	char buffer [33];
-	vga_puts ("Multiboot info (magic 0x");
-	vga_puts (format_uint32_t (buffer, magic, 8, 16));
-	vga_putline ("):");
-	data_dump ((uintptr_t) info, info, info + 1);
-
-	vga_puts ("MULTIBOOT_INFO_MEMORY:           "); vga_putchar (info->flags & MULTIBOOT_INFO_MEMORY           ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_BOOTDEV:          "); vga_putchar (info->flags & MULTIBOOT_INFO_BOOTDEV          ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_CMDLINE:          "); vga_putchar (info->flags & MULTIBOOT_INFO_CMDLINE          ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_MODS:             "); vga_putchar (info->flags & MULTIBOOT_INFO_MODS             ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_AOUT_SYMS:        "); vga_putchar (info->flags & MULTIBOOT_INFO_AOUT_SYMS        ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_ELF_SHDR:         "); vga_putchar (info->flags & MULTIBOOT_INFO_ELF_SHDR         ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_MEM_MAP:          "); vga_putchar (info->flags & MULTIBOOT_INFO_MEM_MAP          ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_DRIVE_INFO:       "); vga_putchar (info->flags & MULTIBOOT_INFO_DRIVE_INFO       ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_CONFIG_TABLE:     "); vga_putchar (info->flags & MULTIBOOT_INFO_CONFIG_TABLE     ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_BOOT_LOADER_NAME: "); vga_putchar (info->flags & MULTIBOOT_INFO_BOOT_LOADER_NAME ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_APM_TABLE:        "); vga_putchar (info->flags & MULTIBOOT_INFO_APM_TABLE        ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_VBE_INFO:         "); vga_putchar (info->flags & MULTIBOOT_INFO_VBE_INFO         ? '1' : '0'); vga_putchar ('\n');
-	vga_puts ("MULTIBOOT_INFO_FRAMEBUFFER_INFO: "); vga_putchar (info->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO ? '1' : '0'); vga_putchar ('\n');
-
-	if (info->flags & MULTIBOOT_INFO_CMDLINE) {
-		vga_puts ("Command line: ");
-		vga_putline ((const char*) info->cmdline);
+	for (const multiboot_memory_map_t* mmap = first_memory_map_t (info->mmap_addr);
+	     mmap < first_memory_map_t (info->mmap_addr + info->mmap_length);
+	     mmap = next_memory_map_t (mmap)) {
+		vga_color oldcolor = vga_getcolor ();
+		if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE)
+			vga_setcolor (make_vga_color (COLOR_WHITE, oldcolor.bg));
+		format_mmap (mmap);
+		vga_setcolor (oldcolor);
 	}
-
-	/* vga_puts ("Multiboot flags: 0b"); */
-	/* vga_putline (format_uint32_t (buffer, info->flags, 32, 2)); */
-
-	/* vga_putline ("Multiboot header:"); */
-	/* struct multiboot_header* header = (struct multiboot_header*) (1 << 20); */
-	/* data_dump ((uintptr_t) header, header, header + 1); */
 
 	vga_putline ("System halt");
 }
