@@ -1,115 +1,44 @@
+#include "multiboot.h"
 #include "vga.h"
 #include "format.h"
 #include "portio.h"
+#include "ddump.h"
 
-static inline
-uint32_t cr0 (void)
-{
-	uint32_t ret;
-	__asm__ ("movl %%cr0, %0" : "=r" (ret));
-	return ret;
-}
-
-static inline
-uint8_t chipset_data (uint8_t index)
-{
-	outb (0x22, index);
-	return inb (0x23);
-}
-
-static inline
-void sanitarily_print_char (char c)
-{
-	if (' ' <= c && c < 127) {
-		vga_color oldcolor = vga_getcolor ();
-		vga_setcolor (make_vga_color (COLOR_WHITE, COLOR_BLACK));
-		vga_putchar (c);
-		vga_setcolor (oldcolor);
-	}
-	else
-		vga_putchar ('.');
-}
-
-static
-ptrdiff_t data_dump_row (uint32_t base, const uint8_t* begin, const uint8_t* end)
-{
-	enum {
-		DDCOLS = 16
-	};
-
-	char print_buffer [12];
-	if (begin + 16 < end)
-		end = begin + 16;
-
-	vga_puts (format_uint32_t (print_buffer, base, 8, 16));
-	vga_putchar (':');
-
-	for (const uint8_t* ptr = begin; ptr != end; ++ptr) {
-		if ((ptr - begin) % 2 == 0)
-			vga_putchar (' ');
-		vga_puts (format_uint32_t (print_buffer, *ptr, 2, 16));
-	}
-
-	// End of column is ((col * 5 + 1) / 2)
-	int spaces = ((DDCOLS * 5 + 1) / 2) - (((end - begin) * 5 + 1) / 2);
-	for (int i = 0; i < spaces; ++i)
-		vga_putchar (' ');
-	vga_putchar (' ');
-
-	for (const uint8_t* ptr = begin; ptr != end; ++ptr)
-		sanitarily_print_char (*ptr);
-
-	vga_putchar ('\n');
-	return end - begin;
-}
-
-static inline
-void data_dump (uint32_t base, const void* begin, const void* end)
-{
-	const uint8_t* _begin = (const uint8_t*) begin;
-	const uint8_t* _end   = (const uint8_t*) end;
-
-	while (_begin != _end) {
-		ptrdiff_t increment = data_dump_row (base, _begin, _end);
-		base   += increment;
-		_begin += increment;
-	}
-}
-
-static inline
-size_t strlen (const char* str)
-{
-	size_t length = 0;
-	while (str [length] != '\0')
-		++length;
-	return length;
-}
-
-void kernel_main (void)
+void kernel_main (multiboot_info_t* info, uint32_t magic)
 {
 	vga_initialize ();
 
-	char buffer [12];
+	char buffer [33];
+	vga_puts ("Multiboot info (magic 0x");
+	vga_puts (format_uint32_t (buffer, magic, 8, 16));
+	vga_putline ("):");
+	data_dump ((uintptr_t) info, info, info + 1);
 
-	vga_puts ("cr0: ");
-	vga_putline (format_uint32_t (buffer, cr0 (), 0, 10));
+	vga_puts ("MULTIBOOT_INFO_MEMORY:           "); vga_putchar (info->flags & MULTIBOOT_INFO_MEMORY           ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_BOOTDEV:          "); vga_putchar (info->flags & MULTIBOOT_INFO_BOOTDEV          ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_CMDLINE:          "); vga_putchar (info->flags & MULTIBOOT_INFO_CMDLINE          ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_MODS:             "); vga_putchar (info->flags & MULTIBOOT_INFO_MODS             ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_AOUT_SYMS:        "); vga_putchar (info->flags & MULTIBOOT_INFO_AOUT_SYMS        ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_ELF_SHDR:         "); vga_putchar (info->flags & MULTIBOOT_INFO_ELF_SHDR         ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_MEM_MAP:          "); vga_putchar (info->flags & MULTIBOOT_INFO_MEM_MAP          ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_DRIVE_INFO:       "); vga_putchar (info->flags & MULTIBOOT_INFO_DRIVE_INFO       ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_CONFIG_TABLE:     "); vga_putchar (info->flags & MULTIBOOT_INFO_CONFIG_TABLE     ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_BOOT_LOADER_NAME: "); vga_putchar (info->flags & MULTIBOOT_INFO_BOOT_LOADER_NAME ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_APM_TABLE:        "); vga_putchar (info->flags & MULTIBOOT_INFO_APM_TABLE        ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_VBE_INFO:         "); vga_putchar (info->flags & MULTIBOOT_INFO_VBE_INFO         ? '1' : '0'); vga_putchar ('\n');
+	vga_puts ("MULTIBOOT_INFO_FRAMEBUFFER_INFO: "); vga_putchar (info->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO ? '1' : '0'); vga_putchar ('\n');
 
-	vga_puts ("INT_MIN: ");
-	vga_putline (format_int32_t (buffer, (int) 0x80000000, 0, 10));
-	vga_puts ("INT_MIN: 0x");
-	vga_putline (format_uint32_t (buffer, 0x80000000, 0, 16));
+	if (info->flags & MULTIBOOT_INFO_CMDLINE) {
+		vga_puts ("Command line: ");
+		vga_putline ((const char*) info->cmdline);
+	}
 
-	vga_putline ("Testing data dumper:");
-	const char* test1 = "This is some test string.";
-	const char test2 [] = "This is another test string.";
-	data_dump ((uintptr_t) test1, test1, test1 + strlen (test1) + 1);
-	data_dump ((uintptr_t) test2, test2, test2 + sizeof (test2));
+	/* vga_puts ("Multiboot flags: 0b"); */
+	/* vga_putline (format_uint32_t (buffer, info->flags, 32, 2)); */
 
-	vga_putline ("Chipset data:");
-	uint8_t cdata [256];
-	for (size_t i = 0; i < 256; ++i)
-		cdata [i] = chipset_data (i);
-	data_dump (0, cdata, cdata + 256);
+	/* vga_putline ("Multiboot header:"); */
+	/* struct multiboot_header* header = (struct multiboot_header*) (1 << 20); */
+	/* data_dump ((uintptr_t) header, header, header + 1); */
 
 	vga_putline ("System halt");
 }

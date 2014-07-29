@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "string.h"
 
 #define VGA_BASE 0xB8000
 #define vga_buffer (*(volatile uint16_t (*) [VGA_HEIGHT] [VGA_WIDTH]) VGA_BASE)
@@ -6,15 +7,6 @@
 size_t vga_current_row;
 size_t vga_current_column;
 vga_color vga_current_color;
-
-static inline
-size_t strlen (const char* str)
-{
-	size_t length = 0;
-	while (str [length] != '\0')
-		++length;
-	return length;
-}
 
 static inline
 void vga_putraw (char c, vga_color color, size_t col, size_t row)
