@@ -5,6 +5,16 @@ CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Wall -Wextra
 LD = ld
 LDFLAGS = -march=i686 -melf_i386 -nostdlib
 
+CSOURCES := $(wildcard *.c)
+COBJECTS := $(patsubst %.c,%.c.o,$(CSOURCES))
+CDEPENDS := $(patsubst %.c,%.c.d,$(CSOURCES))
+
+ASMSOURCES := $(wildcard *.s)
+ASMOBJECTS := $(patsubst %.s,%.s.o,$(ASMSOURCES))
+
+DEPENDS := $(CDEPENDS)
+OBJECTS := $(COBJECTS) $(ASMOBJECTS)
+
 .PHONY: all
 all: kernel.iso
 
@@ -18,24 +28,23 @@ kernel.iso: multiboot.bin
 	grub-mkrescue -o $@ $(ISODIR)
 	rm -rf $(ISODIR)
 
-multiboot.bin: multiboot.o main.o vga.o format.o
-	$(LD) $(LDFLAGS) -T multiboot.ld -o $@ $^
+multiboot.bin: $(DEPENDS) $(OBJECTS)
+	$(LD) $(LDFLAGS) -T multiboot.ld -o $@ $(OBJECTS)
 
-multiboot.o: multiboot.s
-	$(AS) $(ASFLAGS) -o $@ $^
+%.c.d: %.c
+	$(CC) -o $@ -MM $<
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+%.c.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-vga.o: vga.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+%.s.o: %.s
+	$(AS) $(ASFLAGS) -o $@ $<
 
-format.o: format.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+-include $(DEPENDS)
 
 .PHONY: clean
 clean:
-	rm -f multiboot.o main.o vga.o multiboot.bin kernel.iso
+	rm -f kernel.iso multiboot.bin $(OBJECTS)
 
 .PHONY: test
 test: kernel.iso
