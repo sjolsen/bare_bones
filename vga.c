@@ -26,14 +26,14 @@ static inline
 void vga_advance_line (void)
 {
 	vga_current_column = 0;
-	if (++vga_current_row == VGA_HEIGHT)
-		vga_current_row = 0;
+	if (++vga_current_row >= VGA_HEIGHT)
+		vga_scroll (1);
 }
 
 static inline
 void vga_advance_char (void)
 {
-	if (++vga_current_column == VGA_WIDTH)
+	if (++vga_current_column >= VGA_WIDTH)
 	{
 		vga_current_column = 0;
 		vga_advance_line ();
@@ -51,6 +51,11 @@ void vga_initialize (void)
 	for (size_t row = 0; row < VGA_HEIGHT; ++row)
 		for (size_t col = 0; col < VGA_WIDTH; ++col)
 			vga_buffer [row] [col] = make_vga_entry (' ', vga_current_color).value;
+}
+
+vga_color vga_getcolor (void)
+{
+	return vga_current_color;
 }
 
 void vga_setcolor (vga_color color)

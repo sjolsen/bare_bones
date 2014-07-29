@@ -21,7 +21,7 @@ static inline
 void sanitarily_print_char (char c)
 {
 	if (' ' <= c && c < 127) {
-		vga_color oldcolor = vga_current_color;
+		vga_color oldcolor = vga_getcolor ();
 		vga_setcolor (make_vga_color (COLOR_WHITE, COLOR_BLACK));
 		vga_putchar (c);
 		vga_setcolor (oldcolor);
@@ -30,41 +30,60 @@ void sanitarily_print_char (char c)
 		vga_putchar ('.');
 }
 
-static inline
-void data_dump (uint32_t base, uint8_t (*get_data) (void* closure, uint32_t index), void* closure, uint32_t amount)
+static
+ptrdiff_t data_dump_row (uint32_t base, const uint8_t* begin, const uint8_t* end)
 {
-	char buffer [12];
-	for (uint32_t row = 0; row < (amount + 15) / 16; ++row) {
-		uint8_t data [16];
-		uint8_t* dataptr = data;
+	enum {
+		DDCOLS = 16
+	};
 
-		for (int col = 0; col < 16 && row * 16 + col < amount; ++col)
-			*dataptr++ = get_data (closure, row * 16 + col);
+	char print_buffer [12];
+	if (begin + 16 < end)
+		end = begin + 16;
 
-		vga_puts (format_uint32_t (buffer, base + row * 16, 8, 16));
-		vga_puts (": ");
+	vga_puts (format_uint32_t (print_buffer, base, 8, 16));
+	vga_putchar (':');
 
-		for (uint8_t* ptr = data; ptr != dataptr; ++ptr) {
-			vga_puts (format_uint32_t (buffer, *ptr, 2, 16));
-			if ((ptr - data) % 2 != 0)
-				vga_putchar (' ');
-		}
-		vga_current_column = 51;
+	for (const uint8_t* ptr = begin; ptr != end; ++ptr) {
+		if ((ptr - begin) % 2 == 0)
+			vga_putchar (' ');
+		vga_puts (format_uint32_t (print_buffer, *ptr, 2, 16));
+	}
 
-		for (uint8_t* ptr = data; ptr != dataptr; ++ptr)
-			sanitarily_print_char (*ptr);
+	// End of column is ((col * 5 + 1) / 2)
+	int spaces = ((DDCOLS * 5 + 1) / 2) - (((end - begin) * 5 + 1) / 2);
+	for (int i = 0; i < spaces; ++i)
+		vga_putchar (' ');
+	vga_putchar (' ');
 
-		vga_putchar ('\n');
+	for (const uint8_t* ptr = begin; ptr != end; ++ptr)
+		sanitarily_print_char (*ptr);
+
+	vga_putchar ('\n');
+	return end - begin;
+}
+
+static inline
+void data_dump (uint32_t base, const void* begin, const void* end)
+{
+	const uint8_t* _begin = (const uint8_t*) begin;
+	const uint8_t* _end   = (const uint8_t*) end;
+
+	while (_begin != _end) {
+		ptrdiff_t increment = data_dump_row (base, _begin, _end);
+		base   += increment;
+		_begin += increment;
 	}
 }
 
 static inline
-uint8_t ddump_csd (void* _ __attribute__ ((unused)), uint32_t index)
-{ return chipset_data (index); }
-
-static inline
-uint8_t array_access (void* array, uint32_t index)
-{ return ((uint8_t*) array) [index]; }
+size_t strlen (const char* str)
+{
+	size_t length = 0;
+	while (str [length] != '\0')
+		++length;
+	return length;
+}
 
 void kernel_main (void)
 {
@@ -81,11 +100,16 @@ void kernel_main (void)
 	vga_putline (format_uint32_t (buffer, 0x80000000, 0, 16));
 
 	vga_putline ("Testing data dumper:");
-	char test [] = "This is some test string.";
-	data_dump ((uintptr_t) test, &array_access, test, sizeof (test));
+	const char* test1 = "This is some test string.";
+	const char test2 [] = "This is another test string.";
+	data_dump ((uintptr_t) test1, test1, test1 + strlen (test1) + 1);
+	data_dump ((uintptr_t) test2, test2, test2 + sizeof (test2));
 
 	vga_putline ("Chipset data:");
-	data_dump (0, &ddump_csd, NULL, 256);
+	uint8_t cdata [256];
+	for (size_t i = 0; i < 256; ++i)
+		cdata [i] = chipset_data (i);
+	data_dump (0, cdata, cdata + 256);
 
 	vga_putline ("System halt");
 }

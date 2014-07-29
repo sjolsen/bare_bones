@@ -57,11 +57,8 @@ vga_entry make_vga_entry (uint8_t c, vga_color color)
 	return (vga_entry) {{c, color}};
 }
 
-extern size_t vga_current_row;
-extern size_t vga_current_column;
-extern vga_color vga_current_color;
-
 void vga_initialize (void);
+vga_color vga_getcolor (void);
 void vga_setcolor (vga_color color);
 void vga_scroll (size_t lines);
 void vga_putchar (char c);
