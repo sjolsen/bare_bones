@@ -1,3 +1,5 @@
+OSNAME = "Bare Bones based on OSDev tutorial"
+
 AS = as
 ASFLAGS = -march=i686 --32
 CC = gcc
@@ -15,21 +17,29 @@ ASMOBJECTS := $(patsubst %.s,%.s.o,$(ASMSOURCES))
 DEPENDS := $(CDEPENDS)
 OBJECTS := $(COBJECTS) $(ASMOBJECTS)
 
-.PHONY: all
-all: kernel.iso
+.PHONY: all test clean cleandeps
 
-kernel.iso: multiboot.bin
+all: kernel.iso
+test: kernel.iso
+	qemu-system-i386 -cdrom $<
+
+clean:
+	rm -f kernel.iso kernel.bin $(OBJECTS)
+cleandeps:
+	rm -f $(DEPENDS)
+
+kernel.iso: kernel.bin
 	$(eval ISODIR := $(shell mktemp -d))
 	mkdir -p $(ISODIR)
 	mkdir -p $(ISODIR)/boot
 	cp $< $(ISODIR)/boot/
 	mkdir -p $(ISODIR)/boot/grub
-	cp grub.cfg $(ISODIR)/boot/grub/grub.cfg
+	echo 'menuentry "'"$(OSNAME)"'" {\n multiboot /boot/'"$<"'\n}' > $(ISODIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $@ $(ISODIR)
 	rm -rf $(ISODIR)
 
-multiboot.bin: $(DEPENDS) $(OBJECTS)
-	$(LD) $(LDFLAGS) -T multiboot.ld -o $@ $(OBJECTS)
+kernel.bin: $(DEPENDS) $(OBJECTS)
+	$(LD) $(LDFLAGS) -T kernel.ld -o $@ $(OBJECTS)
 
 %.c.d: %.c
 	$(CC) -o $@ -MM $<
@@ -41,11 +51,3 @@ multiboot.bin: $(DEPENDS) $(OBJECTS)
 	$(AS) $(ASFLAGS) -o $@ $<
 
 -include $(DEPENDS)
-
-.PHONY: clean
-clean:
-	rm -f kernel.iso multiboot.bin $(OBJECTS)
-
-.PHONY: test
-test: kernel.iso
-	qemu-system-i386 -cdrom $<
