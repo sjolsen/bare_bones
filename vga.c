@@ -58,6 +58,25 @@ void vga_setcolor (vga_color color)
 	current_color = color;
 }
 
+void vga_scroll (size_t lines)
+{
+	if (lines == 0)
+		return;
+	if (current_row < lines)
+		lines = current_row;
+	current_row -= lines;
+
+	volatile uint16_t* dst = vga_buffer [0];
+	volatile uint16_t* src = vga_buffer [lines];
+	volatile uint16_t* const dst_end = dst + VGA_WIDTH * (VGA_HEIGHT - lines);
+	volatile uint16_t* const src_end = src + VGA_WIDTH * (VGA_HEIGHT - lines);
+
+	while (dst != dst_end)
+		*dst++ = *src++;
+	while (dst != src_end)
+		*dst++ = make_vga_entry (' ', current_color).value;
+}
+
 void vga_putchar (char c)
 {
 	switch (c)

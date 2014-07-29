@@ -57,6 +57,7 @@ vga_entry make_vga_entry (uint8_t c, vga_color color)
 
 void vga_initialize (void);
 void vga_setcolor (vga_color color);
+void vga_scroll (size_t lines);
 void vga_putchar (char c);
 void vga_puts (const char* data);
 

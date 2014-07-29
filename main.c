@@ -21,7 +21,11 @@ void kernel_main (void)
 		vga_puts ("Hello, kernel World! This is a very long line.");
 	}
 
+	vga_scroll (3);
 	vga_setcolor (make_vga_color (COLOR_WHITE, COLOR_BLACK));
+	vga_puts ("The first line should be green.");
+	vga_putchar ('\n');
+
 	for (size_t i = 0; i < 512; ++i)
 		vga_putchar ('A' + (i % (1 + 'Z' - 'A')));
 }
