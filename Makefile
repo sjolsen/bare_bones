@@ -19,24 +19,14 @@ OBJECTS := $(COBJECTS) $(ASMOBJECTS)
 
 .PHONY: all test clean cleandeps
 
-all: kernel.iso
-test: kernel.iso
-	qemu-system-i386 -cdrom $<
+all: kernel.bin
+test: kernel.bin
+	qemu-system-i386 -kernel $<
 
 clean:
-	rm -f kernel.iso kernel.bin $(OBJECTS)
+	rm -f kernel.bin $(OBJECTS)
 cleandeps:
 	rm -f $(DEPENDS)
-
-kernel.iso: kernel.bin
-	$(eval ISODIR := $(shell mktemp -d))
-	mkdir -p $(ISODIR)
-	mkdir -p $(ISODIR)/boot
-	cp $< $(ISODIR)/boot/
-	mkdir -p $(ISODIR)/boot/grub
-	echo 'menuentry "'"$(OSNAME)"'" {\n multiboot /boot/'"$<"'\n}' > $(ISODIR)/boot/grub/grub.cfg
-	grub-mkrescue -o $@ $(ISODIR)
-	rm -rf $(ISODIR)
 
 kernel.bin: $(DEPENDS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -T kernel.ld -o $@ $(OBJECTS)
