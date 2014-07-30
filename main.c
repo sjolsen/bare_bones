@@ -29,8 +29,9 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	initialize_ISR_table ();
 	vga_putline ("IDT loaded");
 
-	ISR_table [0x21] = &ISR_alert;
-	vga_putline ("Installed keyboard ISR");
+	for (int i = 0; i < 0x30; ++i)
+		ISR_table [i] = &ISR_alert;
+	vga_putline ("Installed alert ISR");
 
 	__asm__ ("sti");
 	while (true)

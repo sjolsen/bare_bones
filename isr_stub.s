@@ -7,7 +7,9 @@
 \name:
 	pushal
         mov \number, %eax
+        pushl %eax
 	call ISR_entry
+        popl %eax
 	popal
 	iret
 	.size \name, . - \name
