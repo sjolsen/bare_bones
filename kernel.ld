@@ -17,6 +17,7 @@ SECTIONS
 	{
 		*(.multiboot)
 		*(.text)
+                *(.text.isr)
 	}
 
 	/* Read-only data. */
