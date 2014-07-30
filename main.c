@@ -3,6 +3,7 @@
 #include "GDT.h"
 #include "IDT.h"
 #include "ISR.h"
+#include "8259.h"
 #include "ddump.h"
 
 void ISR_alert (uint32_t interrupt)
@@ -32,6 +33,9 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	for (int i = 0; i < 0x30; ++i)
 		ISR_table [i] = &ISR_alert;
 	vga_putline ("Installed alert ISR");
+
+	IRQ_disable (0);
+	IRQ_enable (1);
 
 	__asm__ ("sti");
 	while (true)
