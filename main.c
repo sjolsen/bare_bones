@@ -123,7 +123,9 @@ void reload_segments (uint32_t code_descriptor, uint32_t data_descriptor)
 	code_descriptor *= sizeof (GDT_entry);
 	data_descriptor *= sizeof (GDT_entry);
 	__asm__ (
-		"ljmpl $0x08, $reload_CS\n"
+		"pushl %0\n"
+		"pushl $reload_CS\n"
+		"lret\n"
 	"reload_CS:"
 		"mov %1, %%ds\n"
 		"mov %1, %%es\n"
