@@ -1,3 +1,0 @@
--e menuentry "Bare Bones based on OSDev tutorial" {
- multiboot /boot/kernel.bin
-}

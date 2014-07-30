@@ -44,7 +44,7 @@ IDT_entry make_basic_IDT_entry (void (*address) (void))
 			};
 } */
 
-typedef struct __attribute__ ((packed)) {
+typedef struct __attribute__ ((packed)) __attribute__ ((aligned (8))) {
 	uint16_t limit_low;
 	uint16_t base_low;
 	uint8_t  base_high1;
@@ -61,7 +61,6 @@ typedef struct __attribute__ ((packed)) {
 	uint8_t  granularity : 1;
 	uint8_t  base_high2;
 } GDT_entry;
-
 _Static_assert (sizeof (GDT_entry) == 8, "GDT not packed");
 
 GDT_entry make_code_GDT (uint32_t base, uint32_t limit,
@@ -110,10 +109,10 @@ GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
 
 void install_GDT (const GDT_entry* base, uint32_t entries)
 {
-	struct {
+	struct __attribute__ ((packed)) {
 		uint16_t length;
 		uint32_t base;
-	} GDT = {entries / sizeof (GDT_entry), (uintptr_t) base};
+	} GDT = {entries * sizeof (GDT_entry), (uintptr_t) base};
 	__asm__ ("lgdt (%0)" :: "p" (&GDT));
 }
 
@@ -122,7 +121,7 @@ void reload_segments (uint32_t code_descriptor, uint32_t data_descriptor)
 	code_descriptor *= sizeof (GDT_entry);
 	data_descriptor *= sizeof (GDT_entry);
 	__asm__ (
-		"mov %0, %%cs\n"
+//		"mov %0, %%cs\n"
 		"mov %1, %%ds\n"
 		"mov %1, %%es\n"
 		"mov %1, %%fs\n"
