@@ -31,7 +31,7 @@ GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
                          bool writable, bool downward,
                          uint8_t privilege, bool page_granularity);
 
-void install_GDT (const GDT_entry* base, uint32_t entries);
-void reload_segments (uint32_t code_descriptor, uint32_t data_descriptor);
+void install_GDT (const GDT_entry* base, uint16_t entries);
+void reload_segments (uint16_t code_descriptor, uint16_t data_descriptor);
 
 #endif

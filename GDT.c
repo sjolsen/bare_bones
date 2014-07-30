@@ -49,7 +49,7 @@ GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
 	};
 }
 
-void install_GDT (const GDT_entry* base, uint32_t entries)
+void install_GDT (const GDT_entry* base, uint16_t entries)
 {
 	struct __attribute__ ((packed)) {
 		uint16_t length;
@@ -58,10 +58,10 @@ void install_GDT (const GDT_entry* base, uint32_t entries)
 	__asm__ ("lgdt (%0)" :: "p" (&GDT));
 }
 
-void reload_segments (uint32_t code_descriptor, uint32_t data_descriptor)
+void reload_segments (uint16_t code_descriptor, uint16_t data_descriptor)
 {
-	code_descriptor *= sizeof (GDT_entry);
-	data_descriptor *= sizeof (GDT_entry);
+	uint32_t code = code_descriptor * sizeof (GDT_entry);
+	uint32_t data = data_descriptor * sizeof (GDT_entry);
 	__asm__ (
 		"pushl %0\n"
 		"pushl $reload_CS\n"
@@ -72,6 +72,6 @@ void reload_segments (uint32_t code_descriptor, uint32_t data_descriptor)
 		"mov %1, %%fs\n"
 		"mov %1, %%gs\n"
 		"mov %1, %%ss\n"
-		:: "r" (code_descriptor), "r" (data_descriptor)
+		:: "r" (code), "r" (data)
 	);
 }

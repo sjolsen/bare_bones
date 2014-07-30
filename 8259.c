@@ -8,6 +8,9 @@ enum {
 	PIC2_COMMAND = 0xA0,
 	PIC2_DATA    = 0xA1,
 
+	// End-of-interrupt command
+	EOI = 0x20,
+
 	// 8259A Initialization Control Word 1
 	ICW1           = 0x10, // Base for ICW1
 	ICW1_NEED_ICW4 = 0x01, // Require ICW4
@@ -65,6 +68,17 @@ void remap_8259_PIC (uint8_t master_base, uint8_t slave_base)
 
 	outb (PIC1_DATA, master_mask);
 	outb (PIC1_DATA, slave_mask);
+}
+
+void IRQ_EOI_master (void)
+{
+	outb (PIC1_COMMAND, EOI);
+}
+
+void IRQ_EOI_slave (void)
+{
+	outb (PIC1_COMMAND, EOI);
+	outb (PIC2_COMMAND, EOI);
 }
 
 void IRQ_disable (uint8_t IRQ)

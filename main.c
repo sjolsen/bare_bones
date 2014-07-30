@@ -1,48 +1,18 @@
 #include "multiboot.h"
 #include "vga.h"
 #include "GDT.h"
+#include "IDT.h"
+#include "ISR.h"
 #include "ddump.h"
 
-/* #define INTERRUPT(name, body) __attribute__ ((naked)) void name (void) \
-{ \
-	__asm__ ("pushal"); \
-	{ body } \
-	__asm__ ("popal"); \
-	__asm__ ("iret"); \
+void ISR_alert (uint32_t interrupt)
+{
+	char buffer [3];
+	vga_puts ("Received interrupt 0x");
+	vga_putline (format_uint (buffer, interrupt, 2, 16));
 }
 
-INTERRUPT (ISR_alert, {
-	vga_putline ("Received an interrupt");
-})
-
-
-
-typedef struct __attribute__ ((packed)) {
-	uint8_t gate_type : 4;
-	uint8_t segment   : 1;
-	uint8_t privilege : 2;
-	uint8_t present   : 1;
-} typeattr;
-
-typedef struct __attribute__ ((packed)) {
-	uint16_t entry_low;
-	uint16_t CS_selector;
-	uint8_t  zero;
-	typeattr type;
-	uint16_t entry_high;
-} IDT_entry;
-
-static inline
-IDT_entry make_basic_IDT_entry (void (*address) (void))
-{
-	return (IDT_entry) {
-		(uintptr_t) address,
-		0,
-			0,
-			};
-} */
-
-void kernel_main (multiboot_info_t* info, uint32_t magic)
+void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 {
 	vga_initialize ();
 
@@ -53,7 +23,18 @@ void kernel_main (multiboot_info_t* info, uint32_t magic)
 	};
 	install_GDT (GDT, 3);
 	reload_segments (1, 2);
-	vga_putline ("GDT Loaded");
+	vga_putline ("GDT loaded");
+
+	initialize_IDT (1);
+	initialize_ISR_table ();
+	vga_putline ("IDT loaded");
+
+	ISR_table [0x21] = &ISR_alert;
+	vga_putline ("Installed keyboard ISR");
+
+	__asm__ ("sti");
+	while (true)
+		__asm__ ("hlt");
 
 	vga_putline ("System halt");
 }

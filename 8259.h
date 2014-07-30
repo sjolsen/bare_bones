@@ -5,6 +5,8 @@
 #include <stdbool.h>
 
 void remap_8259_PIC (uint8_t master_base, uint8_t slave_base);
+void IRQ_EOI_master (void);
+void IRQ_EOI_slave (void);
 void IRQ_disable (uint8_t IRQ);
 void IRQ_enable (uint8_t IRQ);
 bool IRQ_requested (uint8_t IRQ);
