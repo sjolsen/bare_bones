@@ -108,6 +108,8 @@ void serial_initialize (uint16_t port, uint16_t divisor)
 		.break_error       = 0,
 		.status_change     = 0
 	});
+	outb(port + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+	outb(port + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 	IRQ_enable (IRQ_COM1);
 }
 
@@ -171,12 +173,25 @@ bool basic_keyconsumer (cbuffer* kbuffer)
 	return true;
 }
 
+#include "cbuffer.h"
+static cbuffer COM1_buffer;
+
+bool basic_COM1_consumer (void)
+{
+	bool did_work = false;
+	while (!cbuffer_empty (&COM1_buffer)) {
+		vga_putchar (cbuffer_read (&COM1_buffer));
+		did_work = true;
+	}
+	return did_work;
+}
+
 void serial_ISR (__attribute__ ((unused)) INT_index interrupt)
 {
 	if (inb (COM1 + COM_LINE_STATUS) & 1) {
-		char buffer [3];
-		vga_puts ("COM1: read 0x");
-		vga_putline (format_uint (buffer, inb (COM1 + COM_DATA), 2, 16));
+		if (cbuffer_full (&COM1_buffer))
+			basic_COM1_consumer ();
+		cbuffer_write (&COM1_buffer, (inb (COM1 + COM_DATA)));
 	}
 }
 
@@ -188,15 +203,17 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	ISR_table_initialize (&debug_ISR);
 	keyboard_initialize (&basic_keyconsumer);
 
-	serial_initialize (COM1, 3);
+	COM1_buffer = make_cbuffer ();
+	serial_initialize (COM1, 1);
 	ISR_table [INT_COM1] = &serial_ISR;
 
 	IRQ_disable (IRQ_PIT);
 
-	__asm__ ("sti"); // Enable interrupts
 	while (true) {
-		if (!(keyboard_consume ()))
-			__asm__ ("hlt");
+		__asm__ ("cli");
+		if (!(keyboard_consume () ||
+		      basic_COM1_consumer ()))
+			__asm__ ("sti\nhlt");
 	}
 
 	vga_putline ("System halt");
