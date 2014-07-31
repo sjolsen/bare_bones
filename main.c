@@ -1,10 +1,11 @@
 #include "multiboot.h"
-#include "vga.h"
 #include "GDT.h"
 #include "IDT.h"
 #include "ISR.h"
 #include "8259.h"
 #include "portio.h"
+#include "vga.h"
+#include "format.h"
 #include "ddump.h"
 
 uint8_t keybuffer [256];
@@ -63,7 +64,7 @@ void ISR_alert (uint32_t interrupt)
 	vga_putline (format_uint (buffer, interrupt, 2, 16));
 }
 
-void ISR_keyboard (uint32_t interrupt)
+void ISR_keyboard (uint32_t __attribute__ ((unused)) interrupt)
 {
 	uint8_t code = inb (0x60);
 	if (!(code & 0x80)) // Pressed
