@@ -1,6 +1,7 @@
 #ifndef _8259_H
 #define _8259_H
 
+#include "IRQ.h"
 #include <stdint.h>
 
 enum {
@@ -42,6 +43,6 @@ enum {
 };
 
 void remap_8259_PIC (uint8_t master_base, uint8_t slave_base);
-uint8_t read_8259_register (uint8_t IRQ, uint8_t OCW3_register);
+uint8_t read_8259_register (IRQ irq, uint8_t OCW3_register);
 
 #endif

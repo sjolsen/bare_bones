@@ -15,6 +15,7 @@ bool null_kconsumer (__attribute__ ((unused)) keybuffer* kbuffer)
 static
 void ISR_keyboard (__attribute__ ((unused)) uint32_t interrupt)
 {
+	// FIXME: Hardcoded constant
 	uint8_t code = inb (0x60);
 	keybuffer_write (&kbuffer, code);
 }
@@ -26,7 +27,7 @@ void keyboard_initialize (keyboard_consumer_t consumer)
 {
 	kbuffer = make_keybuffer ();
 	kconsumer = (consumer ? consumer : &null_kconsumer);
-	ISR_table [0x21] = &ISR_keyboard;
+	ISR_table [INT_keyboard] = &ISR_keyboard;
 	IRQ_enable (1);
 }
 

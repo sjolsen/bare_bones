@@ -2,9 +2,10 @@
 #include "GDT.h"
 #include "8259.h"
 #include "isr_stub.h"
+#include "ISR.h"
 
 static
-IDT_entry IDT [0x30];
+IDT_entry IDT [INT_LIMIT];
 
 static
 IDT_entry make_IDT_entry (void (*address) (void), uint16_t code_selector)
@@ -44,7 +45,7 @@ void install_IDT (const IDT_entry* base, uint16_t entries)
 
 void IDT_initialize (void)
 {
-	remap_8259_PIC (0x20, 0x28);
+	remap_8259_PIC (INT_IRQ_MBASE, INT_IRQ_SBASE);
 
 	IDT [0x00] = make_IDT_entry (&_ISR_00, KERNEL_CODE_SELECTOR);
 	IDT [0x01] = make_IDT_entry (&_ISR_01, KERNEL_CODE_SELECTOR);
@@ -95,5 +96,5 @@ void IDT_initialize (void)
 	IDT [0x2E] = make_IDT_entry (&_ISR_2E, KERNEL_CODE_SELECTOR);
 	IDT [0x2F] = make_IDT_entry (&_ISR_2F, KERNEL_CODE_SELECTOR);
 
-	install_IDT (IDT, 0x30);
+	install_IDT (IDT, INT_LIMIT);
 }

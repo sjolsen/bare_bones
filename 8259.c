@@ -23,10 +23,10 @@ void remap_8259_PIC (uint8_t master_base, uint8_t slave_base)
 	outb (PIC1_DATA, slave_mask);
 }
 
-uint8_t read_8259_register (uint8_t IRQ, uint8_t OCW3_register)
+uint8_t read_8259_register (IRQ irq, uint8_t OCW3_register)
 {
-	uint16_t port = (IRQ < 8) ? PIC1_COMMAND : PIC2_COMMAND;
-	uint8_t index = IRQ % 8;
+	uint16_t port = (irq < 8) ? PIC1_COMMAND : PIC2_COMMAND;
+	uint8_t index = irq % 8;
 	outb (port, OCW3 | OCW3_READ | OCW3_register);
 	return inb (port) & (1 << index);
 }
