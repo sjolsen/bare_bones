@@ -7,6 +7,113 @@
 #include "keyboard.h"
 #include "format.h"
 
+
+#include "portio.h"
+
+enum {
+	// Port bases
+	COM1 = 0x3F8,
+	COM2 = 0x2F8,
+	COM3 = 0x3E8,
+	COM4 = 0x2E8,
+
+	// Register indices
+	COM_DATA              = 0,
+	COM_INTERRUPT_ENABLE  = 1,
+	COM_DLAB_DIVISOR_LOW  = 0,
+	COM_DLAB_DIVISOR_HIGH = 1,
+	COM_INTERRUPT_ID      = 2,
+	COM_FIFO_CONTROL      = 2,
+	COM_LINE_CONTROL      = 3,
+	COM_MODEM_CONTROL     = 4,
+	COM_LINE_STATUS       = 5,
+	COM_MODEM_STATUS      = 6,
+	COM_SCRATCH           = 7,
+
+	// Line control
+	COM_CHAR_5_BIT   = 0b00000000,
+	COM_CHAR_6_BIT   = 0b00000001,
+	COM_CHAR_7_BIT   = 0b00000010,
+	COM_CHAR_8_BIT   = 0b00000011,
+	COM_STOP_1_BIT   = 0b00000000,
+	COM_STOP_2_BIT   = 0b00000100,
+	COM_PARITY_NONE  = 0b00000000,
+	COM_PARITY_ODD   = 0b00001000,
+	COM_PARITY_EVEN  = 0b00011000,
+	COM_PARITY_MARK  = 0b00101000,
+	COM_PARITY_SPACE = 0b00111000
+};
+
+typedef struct {
+	uint8_t data_available    : 1;
+	uint8_t transmitter_empty : 1;
+	uint8_t break_error       : 1;
+	uint8_t status_change     : 1;
+	uint8_t unused            : 4;
+} COM_interrupts;
+
+typedef struct {
+	uint8_t char_length : 2;
+	uint8_t stop_length : 1;
+	uint8_t parity      : 3;
+	uint8_t unused      : 1;
+	uint8_t enable_DLAB : 1;
+} COM_line_control;
+
+void serial_set_interrupts (uint16_t port, COM_interrupts interrupts)
+{
+	union {
+		COM_interrupts interrupts;
+		uint8_t value;
+	} u = {.interrupts = interrupts};
+	outb (port + COM_INTERRUPT_ENABLE, u.value);
+}
+
+void serial_set_line_control (uint16_t port, COM_line_control line_control)
+{
+	union {
+		COM_line_control line_control;
+		uint8_t value;
+	} u = {.line_control = line_control};
+	outb (port + COM_LINE_CONTROL, u.value);
+}
+
+void serial_setrate (uint16_t port, uint16_t divisor)
+{
+	serial_set_line_control (port, (COM_line_control) {
+		.enable_DLAB = 1
+	});
+	outb (port + COM_DLAB_DIVISOR_LOW, divisor & 0xFF);
+	outb (port + COM_DLAB_DIVISOR_HIGH, (divisor >> 8) & 0xFF);
+}
+
+void serial_initialize (uint16_t port, uint16_t divisor)
+{
+	serial_set_interrupts (port, (COM_interrupts) {
+		.data_available    = 0,
+		.transmitter_empty = 0,
+		.break_error       = 0,
+		.status_change     = 0
+	});
+	serial_setrate (port, divisor);
+	serial_set_line_control (port, (COM_line_control) {
+		.char_length = COM_CHAR_8_BIT,
+		.stop_length = COM_STOP_1_BIT,
+		.parity      = COM_PARITY_NONE,
+		.enable_DLAB = 0
+	});
+	/* outb (port + COM_FIFO_CONTROL, 0xC7);  // FIXME: "Enable FIFO, clear them, with 14-byte threshold" */
+	/* outb (port + COM_MODEM_CONTROL, 0x0B); // FIXME: "IRQs enabled, RTS/DSR set" */
+	serial_set_interrupts (port, (COM_interrupts) {
+		.data_available    = 1,
+		.transmitter_empty = 1,
+		.break_error       = 0,
+		.status_change     = 0
+	});
+}
+
+
+
 void debug_ISR (INT_index interrupt)
 {
 	static const char* name [] = {
@@ -72,8 +179,10 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	IDT_initialize ();
 	ISR_table_initialize (&debug_ISR);
 	keyboard_initialize (&basic_keyconsumer);
+	serial_initialize (COM1, 1);
 
 	IRQ_disable (IRQ_PIT);
+	IRQ_enable (IRQ_COM1);
 
 	__asm__ ("sti"); // Enable interrupts
 	while (true) {
