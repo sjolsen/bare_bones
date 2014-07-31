@@ -1,19 +1,19 @@
 #include "keyboard.h"
 #include "portio.h"
 #include "ISR.h"
-#include "8259.h"
+#include "IRQ.h"
 
 static keybuffer kbuffer;
 static keyboard_consumer_t kconsumer;
 
 static
-bool null_kconsumer (keybuffer* __attribute__ ((unused)) kbuffer)
+bool null_kconsumer (__attribute__ ((unused)) keybuffer* kbuffer)
 {
 	return false;
 }
 
 static
-void ISR_keyboard (uint32_t __attribute__ ((unused)) interrupt)
+void ISR_keyboard (__attribute__ ((unused)) uint32_t interrupt)
 {
 	uint8_t code = inb (0x60);
 	keybuffer_write (&kbuffer, code);

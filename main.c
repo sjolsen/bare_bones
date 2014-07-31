@@ -1,10 +1,10 @@
 #include "multiboot.h"
+#include "vga.h"
 #include "GDT.h"
 #include "IDT.h"
 #include "ISR.h"
 #include "IRQ.h"
 #include "keyboard.h"
-#include "vga.h"
 #include "format.h"
 
 bool basic_keyconsumer (keybuffer* kbuffer)

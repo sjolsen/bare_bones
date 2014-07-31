@@ -1,9 +1,9 @@
 #include "ISR.h"
-#include "8259.h"
+#include "IRQ.h"
 #include <stddef.h>
 
 static
-void null_ISR (uint32_t __attribute__ ((unused)) interrupt)
+void null_ISR (__attribute__ ((unused)) uint32_t interrupt)
 {
 }
 
