@@ -31,13 +31,13 @@ cleandeps:
 kernel.bin: $(DEPENDS) $(OBJECTS)
 	$(LD) $(LDFLAGS) -T kernel.ld -o $@ $(OBJECTS)
 
+-include $(DEPENDS)
+
 %.c.d: %.c
-	$(CC) -o $@ -MM $<
+	$(CC) -MM $< | sed -e 's/\.o:/.c.o:/' > $@
 
 %.c.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.s.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
-
--include $(DEPENDS)
