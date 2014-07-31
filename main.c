@@ -4,58 +4,12 @@
 #include "ISR.h"
 #include "8259.h"
 #include "portio.h"
+#include "keybuffer.h"
 #include "vga.h"
 #include "format.h"
 #include "ddump.h"
 
-uint8_t keybuffer [256];
-size_t keybuffer_wcur = 0;
-size_t keybuffer_rcur = 0;
-
-static inline
-size_t keybuffer_next (size_t cur)
-{
-	return (cur + 1) % 256;
-}
-
-static inline
-bool keybuffer_empty (void)
-{
-	return keybuffer_rcur == keybuffer_wcur;
-}
-
-static inline
-bool keybuffer_full (void)
-{
-	return keybuffer_next (keybuffer_wcur) == keybuffer_rcur;
-}
-
-static inline
-void keybuffer_write (uint8_t code)
-{
-	if (keybuffer_full ())
-		vga_putline ("Keyboard buffer overflow");
-	else {
-		keybuffer [keybuffer_wcur] = code;
-		keybuffer_wcur = keybuffer_next (keybuffer_wcur);
-	}
-}
-
-static inline
-uint8_t keybuffer_read (void)
-{
-	if (keybuffer_empty ()) {
-		vga_putline ("Keyboard buffer underflow");
-		return -1;
-	}
-	else {
-		uint8_t code = keybuffer [keybuffer_rcur];
-		keybuffer_rcur = keybuffer_next (keybuffer_rcur);
-		return code;
-	}
-}
-
-
+static keybuffer kbuffer;
 
 void ISR_alert (uint32_t interrupt)
 {
@@ -67,8 +21,7 @@ void ISR_alert (uint32_t interrupt)
 void ISR_keyboard (uint32_t __attribute__ ((unused)) interrupt)
 {
 	uint8_t code = inb (0x60);
-	if (!(code & 0x80)) // Pressed
-		keybuffer_write (code);
+	keybuffer_write (&kbuffer, code);
 }
 
 void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
@@ -96,15 +49,17 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	IRQ_disable (0);
 	IRQ_enable (1);
 
+	kbuffer = make_keybuffer ();
+
 	__asm__ ("sti"); // Enable interrupts
 
 	while (true) {
-		if (keybuffer_empty ())
+		if (keybuffer_empty (&kbuffer))
 			__asm__ ("hlt");
 		else {
 			char buffer [3];
 			vga_puts ("Scancode 0x");
-			vga_putline (format_uint (buffer, keybuffer_read (), 2, 16));
+			vga_putline (format_uint (buffer, keybuffer_read (&kbuffer), 2, 16));
 		}
 	}
 
