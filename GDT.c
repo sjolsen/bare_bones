@@ -1,8 +1,8 @@
 #include "GDT.h"
 
-
-// Extern functions
+static GDT_entry GDT [3];
 
+static
 GDT_entry make_code_GDT (uint32_t base, uint32_t limit,
                          bool readable, bool conforming,
                          uint8_t privilege, bool page_granularity)
@@ -26,6 +26,7 @@ GDT_entry make_code_GDT (uint32_t base, uint32_t limit,
 	};
 }
 
+static
 GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
                          bool writable, bool downward,
                          uint8_t privilege, bool page_granularity)
@@ -49,6 +50,7 @@ GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
 	};
 }
 
+static
 void install_GDT (const GDT_entry* base, uint16_t entries)
 {
 	struct __attribute__ ((packed)) {
@@ -58,10 +60,11 @@ void install_GDT (const GDT_entry* base, uint16_t entries)
 	__asm__ ("lgdt (%0)" :: "p" (&GDT));
 }
 
-void reload_segments (uint16_t code_descriptor, uint16_t data_descriptor)
+static
+void reload_segments (uint16_t code_selector, uint16_t data_selector)
 {
-	uint32_t code = code_descriptor * sizeof (GDT_entry);
-	uint32_t data = data_descriptor * sizeof (GDT_entry);
+	uint32_t code = code_selector * sizeof (GDT_entry);
+	uint32_t data = data_selector * sizeof (GDT_entry);
 	__asm__ (
 		"pushl %0\n"
 		"pushl $reload_CS\n"
@@ -74,4 +77,17 @@ void reload_segments (uint16_t code_descriptor, uint16_t data_descriptor)
 		"mov %1, %%ss\n"
 		:: "r" (code), "r" (data)
 	);
+}
+
+
+// Extern functions
+
+void GDT_initialize (void)
+{
+	GDT [0] = make_data_GDT (0, 0, false, false, 0, 0);
+	GDT [KERNEL_CODE_SELECTOR] = make_code_GDT (0, -1, true, false, 0, 1);
+	GDT [KERNEL_DATA_SELECTOR] = make_data_GDT (0, -1, true, false, 0, 1);
+
+	install_GDT (GDT, 3);
+	reload_segments (KERNEL_CODE_SELECTOR, KERNEL_DATA_SELECTOR);
 }

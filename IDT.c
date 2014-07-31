@@ -1,4 +1,5 @@
 #include "IDT.h"
+#include "GDT.h"
 #include "8259.h"
 #include "isr_stub.h"
 
@@ -6,7 +7,7 @@ static
 IDT_entry IDT [0x30];
 
 static
-IDT_entry make_IDT_entry (void (*address) (void), uint16_t code_descriptor)
+IDT_entry make_IDT_entry (void (*address) (void), uint16_t code_selector)
 {
 	enum {
 		TASK_32 = 0x5,
@@ -18,7 +19,7 @@ IDT_entry make_IDT_entry (void (*address) (void), uint16_t code_descriptor)
 
 	return (IDT_entry) {
 		.address_low  = (uintptr_t) address & 0xFFFF,
-		.selector     = code_descriptor * sizeof (IDT_entry),
+		.selector     = code_selector * sizeof (IDT_entry),
 		.zero1        = 0,
 		.gate_type    = INTR_32,
 		.zero2        = 0,
@@ -41,58 +42,58 @@ void install_IDT (const IDT_entry* base, uint16_t entries)
 
 // Extern functions
 
-void initialize_IDT (uint16_t code_descriptor)
+void IDT_initialize (void)
 {
 	remap_8259_PIC (0x20, 0x28);
 
-	IDT [0x00] = make_IDT_entry (&_ISR_00, code_descriptor);
-	IDT [0x01] = make_IDT_entry (&_ISR_01, code_descriptor);
-	IDT [0x02] = make_IDT_entry (&_ISR_02, code_descriptor);
-	IDT [0x03] = make_IDT_entry (&_ISR_03, code_descriptor);
-	IDT [0x04] = make_IDT_entry (&_ISR_04, code_descriptor);
-	IDT [0x05] = make_IDT_entry (&_ISR_05, code_descriptor);
-	IDT [0x06] = make_IDT_entry (&_ISR_06, code_descriptor);
-	IDT [0x07] = make_IDT_entry (&_ISR_07, code_descriptor);
-	IDT [0x08] = make_IDT_entry (&_ISR_08, code_descriptor);
-	IDT [0x09] = make_IDT_entry (&_ISR_09, code_descriptor);
-	IDT [0x0A] = make_IDT_entry (&_ISR_0A, code_descriptor);
-	IDT [0x0B] = make_IDT_entry (&_ISR_0B, code_descriptor);
-	IDT [0x0C] = make_IDT_entry (&_ISR_0C, code_descriptor);
-	IDT [0x0D] = make_IDT_entry (&_ISR_0D, code_descriptor);
-	IDT [0x0E] = make_IDT_entry (&_ISR_0E, code_descriptor);
-	IDT [0x0F] = make_IDT_entry (&_ISR_0F, code_descriptor);
-	IDT [0x10] = make_IDT_entry (&_ISR_10, code_descriptor);
-	IDT [0x11] = make_IDT_entry (&_ISR_11, code_descriptor);
-	IDT [0x12] = make_IDT_entry (&_ISR_12, code_descriptor);
-	IDT [0x13] = make_IDT_entry (&_ISR_13, code_descriptor);
-	IDT [0x14] = make_IDT_entry (&_ISR_14, code_descriptor);
-	IDT [0x15] = make_IDT_entry (&_ISR_15, code_descriptor);
-	IDT [0x16] = make_IDT_entry (&_ISR_16, code_descriptor);
-	IDT [0x17] = make_IDT_entry (&_ISR_17, code_descriptor);
-	IDT [0x18] = make_IDT_entry (&_ISR_18, code_descriptor);
-	IDT [0x19] = make_IDT_entry (&_ISR_19, code_descriptor);
-	IDT [0x1A] = make_IDT_entry (&_ISR_1A, code_descriptor);
-	IDT [0x1B] = make_IDT_entry (&_ISR_1B, code_descriptor);
-	IDT [0x1C] = make_IDT_entry (&_ISR_1C, code_descriptor);
-	IDT [0x1D] = make_IDT_entry (&_ISR_1D, code_descriptor);
-	IDT [0x1E] = make_IDT_entry (&_ISR_1E, code_descriptor);
-	IDT [0x1F] = make_IDT_entry (&_ISR_1F, code_descriptor);
-	IDT [0x20] = make_IDT_entry (&_ISR_20, code_descriptor);
-	IDT [0x21] = make_IDT_entry (&_ISR_21, code_descriptor);
-	IDT [0x22] = make_IDT_entry (&_ISR_22, code_descriptor);
-	IDT [0x23] = make_IDT_entry (&_ISR_23, code_descriptor);
-	IDT [0x24] = make_IDT_entry (&_ISR_24, code_descriptor);
-	IDT [0x25] = make_IDT_entry (&_ISR_25, code_descriptor);
-	IDT [0x26] = make_IDT_entry (&_ISR_26, code_descriptor);
-	IDT [0x27] = make_IDT_entry (&_ISR_27, code_descriptor);
-	IDT [0x28] = make_IDT_entry (&_ISR_28, code_descriptor);
-	IDT [0x29] = make_IDT_entry (&_ISR_29, code_descriptor);
-	IDT [0x2A] = make_IDT_entry (&_ISR_2A, code_descriptor);
-	IDT [0x2B] = make_IDT_entry (&_ISR_2B, code_descriptor);
-	IDT [0x2C] = make_IDT_entry (&_ISR_2C, code_descriptor);
-	IDT [0x2D] = make_IDT_entry (&_ISR_2D, code_descriptor);
-	IDT [0x2E] = make_IDT_entry (&_ISR_2E, code_descriptor);
-	IDT [0x2F] = make_IDT_entry (&_ISR_2F, code_descriptor);
+	IDT [0x00] = make_IDT_entry (&_ISR_00, KERNEL_CODE_SELECTOR);
+	IDT [0x01] = make_IDT_entry (&_ISR_01, KERNEL_CODE_SELECTOR);
+	IDT [0x02] = make_IDT_entry (&_ISR_02, KERNEL_CODE_SELECTOR);
+	IDT [0x03] = make_IDT_entry (&_ISR_03, KERNEL_CODE_SELECTOR);
+	IDT [0x04] = make_IDT_entry (&_ISR_04, KERNEL_CODE_SELECTOR);
+	IDT [0x05] = make_IDT_entry (&_ISR_05, KERNEL_CODE_SELECTOR);
+	IDT [0x06] = make_IDT_entry (&_ISR_06, KERNEL_CODE_SELECTOR);
+	IDT [0x07] = make_IDT_entry (&_ISR_07, KERNEL_CODE_SELECTOR);
+	IDT [0x08] = make_IDT_entry (&_ISR_08, KERNEL_CODE_SELECTOR);
+	IDT [0x09] = make_IDT_entry (&_ISR_09, KERNEL_CODE_SELECTOR);
+	IDT [0x0A] = make_IDT_entry (&_ISR_0A, KERNEL_CODE_SELECTOR);
+	IDT [0x0B] = make_IDT_entry (&_ISR_0B, KERNEL_CODE_SELECTOR);
+	IDT [0x0C] = make_IDT_entry (&_ISR_0C, KERNEL_CODE_SELECTOR);
+	IDT [0x0D] = make_IDT_entry (&_ISR_0D, KERNEL_CODE_SELECTOR);
+	IDT [0x0E] = make_IDT_entry (&_ISR_0E, KERNEL_CODE_SELECTOR);
+	IDT [0x0F] = make_IDT_entry (&_ISR_0F, KERNEL_CODE_SELECTOR);
+	IDT [0x10] = make_IDT_entry (&_ISR_10, KERNEL_CODE_SELECTOR);
+	IDT [0x11] = make_IDT_entry (&_ISR_11, KERNEL_CODE_SELECTOR);
+	IDT [0x12] = make_IDT_entry (&_ISR_12, KERNEL_CODE_SELECTOR);
+	IDT [0x13] = make_IDT_entry (&_ISR_13, KERNEL_CODE_SELECTOR);
+	IDT [0x14] = make_IDT_entry (&_ISR_14, KERNEL_CODE_SELECTOR);
+	IDT [0x15] = make_IDT_entry (&_ISR_15, KERNEL_CODE_SELECTOR);
+	IDT [0x16] = make_IDT_entry (&_ISR_16, KERNEL_CODE_SELECTOR);
+	IDT [0x17] = make_IDT_entry (&_ISR_17, KERNEL_CODE_SELECTOR);
+	IDT [0x18] = make_IDT_entry (&_ISR_18, KERNEL_CODE_SELECTOR);
+	IDT [0x19] = make_IDT_entry (&_ISR_19, KERNEL_CODE_SELECTOR);
+	IDT [0x1A] = make_IDT_entry (&_ISR_1A, KERNEL_CODE_SELECTOR);
+	IDT [0x1B] = make_IDT_entry (&_ISR_1B, KERNEL_CODE_SELECTOR);
+	IDT [0x1C] = make_IDT_entry (&_ISR_1C, KERNEL_CODE_SELECTOR);
+	IDT [0x1D] = make_IDT_entry (&_ISR_1D, KERNEL_CODE_SELECTOR);
+	IDT [0x1E] = make_IDT_entry (&_ISR_1E, KERNEL_CODE_SELECTOR);
+	IDT [0x1F] = make_IDT_entry (&_ISR_1F, KERNEL_CODE_SELECTOR);
+	IDT [0x20] = make_IDT_entry (&_ISR_20, KERNEL_CODE_SELECTOR);
+	IDT [0x21] = make_IDT_entry (&_ISR_21, KERNEL_CODE_SELECTOR);
+	IDT [0x22] = make_IDT_entry (&_ISR_22, KERNEL_CODE_SELECTOR);
+	IDT [0x23] = make_IDT_entry (&_ISR_23, KERNEL_CODE_SELECTOR);
+	IDT [0x24] = make_IDT_entry (&_ISR_24, KERNEL_CODE_SELECTOR);
+	IDT [0x25] = make_IDT_entry (&_ISR_25, KERNEL_CODE_SELECTOR);
+	IDT [0x26] = make_IDT_entry (&_ISR_26, KERNEL_CODE_SELECTOR);
+	IDT [0x27] = make_IDT_entry (&_ISR_27, KERNEL_CODE_SELECTOR);
+	IDT [0x28] = make_IDT_entry (&_ISR_28, KERNEL_CODE_SELECTOR);
+	IDT [0x29] = make_IDT_entry (&_ISR_29, KERNEL_CODE_SELECTOR);
+	IDT [0x2A] = make_IDT_entry (&_ISR_2A, KERNEL_CODE_SELECTOR);
+	IDT [0x2B] = make_IDT_entry (&_ISR_2B, KERNEL_CODE_SELECTOR);
+	IDT [0x2C] = make_IDT_entry (&_ISR_2C, KERNEL_CODE_SELECTOR);
+	IDT [0x2D] = make_IDT_entry (&_ISR_2D, KERNEL_CODE_SELECTOR);
+	IDT [0x2E] = make_IDT_entry (&_ISR_2E, KERNEL_CODE_SELECTOR);
+	IDT [0x2F] = make_IDT_entry (&_ISR_2F, KERNEL_CODE_SELECTOR);
 
 	install_IDT (IDT, 0x30);
 }

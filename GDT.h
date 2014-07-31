@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+enum {
+	KERNEL_CODE_SELECTOR = 1,
+	KERNEL_DATA_SELECTOR = 2
+};
+
 typedef struct __attribute__ ((packed)) __attribute__ ((aligned (8))) {
 	uint16_t limit_low;
 	uint16_t base_low;
@@ -23,15 +28,6 @@ typedef struct __attribute__ ((packed)) __attribute__ ((aligned (8))) {
 } GDT_entry;
 _Static_assert (sizeof (GDT_entry) == 8, "GDT not packed");
 
-GDT_entry make_code_GDT (uint32_t base, uint32_t limit,
-                         bool readable, bool conforming,
-                         uint8_t privilege, bool page_granularity);
-
-GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
-                         bool writable, bool downward,
-                         uint8_t privilege, bool page_granularity);
-
-void install_GDT (const GDT_entry* base, uint16_t entries);
-void reload_segments (uint16_t code_descriptor, uint16_t data_descriptor);
+void GDT_initialize (void);
 
 #endif

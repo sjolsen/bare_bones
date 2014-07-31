@@ -2,65 +2,45 @@
 #include "GDT.h"
 #include "IDT.h"
 #include "ISR.h"
-#include "8259.h"
-#include "portio.h"
-#include "keybuffer.h"
+#include "IRQ.h"
+#include "keyboard.h"
 #include "vga.h"
 #include "format.h"
-#include "ddump.h"
 
-static keybuffer kbuffer;
-
-void ISR_alert (uint32_t interrupt)
+bool basic_keyconsumer (keybuffer* kbuffer)
 {
+	if (keybuffer_empty (kbuffer))
+		return false;
+
 	char buffer [3];
-	vga_puts ("Received interrupt 0x");
-	vga_putline (format_uint (buffer, interrupt, 2, 16));
-}
-
-void ISR_keyboard (uint32_t __attribute__ ((unused)) interrupt)
-{
-	uint8_t code = inb (0x60);
-	keybuffer_write (&kbuffer, code);
+	vga_puts ("Scancode 0x");
+	vga_putline (format_uint (buffer, keybuffer_read (kbuffer), 2, 16));
+	return true;
 }
 
 void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 {
 	vga_initialize ();
+	vga_putline ("VGA initialized");
 
-	GDT_entry GDT [] = {
-		make_data_GDT (0, 0, false, false, 0, 0),
-		make_code_GDT (0, -1, true, false, 0, 1),
-		make_data_GDT (0, -1, true, false, 0, 1)
-	};
-	install_GDT (GDT, 3);
-	reload_segments (1, 2);
-	vga_putline ("GDT loaded");
+	GDT_initialize ();
+	vga_putline ("GDT initialized");
 
-	initialize_IDT (1);
-	initialize_ISR_table ();
-	vga_putline ("IDT loaded");
+	IDT_initialize ();
+	vga_putline ("IDT initialized");
 
-	for (int i = 0; i < 0x30; ++i)
-		ISR_table [i] = &ISR_alert;
-	ISR_table [0x21] = &ISR_keyboard;
-	vga_putline ("Installed ISRs");
+	ISR_table_initialize (NULL);
+	vga_putline ("ISRs initialized");
 
-	IRQ_disable (0);
-	IRQ_enable (1);
+	keyboard_initialize (&basic_keyconsumer);
+	vga_putline ("Keyboard initialized");
 
-	kbuffer = make_keybuffer ();
+	IRQ_disable (IRQ_PIT);
 
 	__asm__ ("sti"); // Enable interrupts
-
 	while (true) {
-		if (keybuffer_empty (&kbuffer))
+		if (!(keyboard_consume ()))
 			__asm__ ("hlt");
-		else {
-			char buffer [3];
-			vga_puts ("Scancode 0x");
-			vga_putline (format_uint (buffer, keybuffer_read (&kbuffer), 2, 16));
-		}
 	}
 
 	vga_putline ("System halt");

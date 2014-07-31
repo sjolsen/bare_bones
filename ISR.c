@@ -12,10 +12,12 @@ void null_ISR (uint32_t __attribute__ ((unused)) interrupt)
 
 ISR_t ISR_table [0x30];
 
-void initialize_ISR_table (void)
+void ISR_table_initialize (ISR_t default_ISR)
 {
+	if (default_ISR == NULL)
+		default_ISR = &null_ISR;
 	for (size_t i = 0; i < 0x30; ++i)
-		ISR_table [i] = &null_ISR;
+		ISR_table [i] = default_ISR;
 }
 
 void ISR_entry (uint32_t interrupt)

@@ -6,6 +6,6 @@
 typedef void (*ISR_t) (uint32_t);
 extern ISR_t ISR_table [0x30];
 
-void initialize_ISR_table (void);
+void ISR_table_initialize (ISR_t default_ISR);
 
 #endif

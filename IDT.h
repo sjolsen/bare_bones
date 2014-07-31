@@ -16,6 +16,6 @@ typedef struct __attribute__ ((packed)) __attribute__ ((aligned (8))) {
 } IDT_entry;
 _Static_assert (sizeof (IDT_entry) == 8, "IDT not packed");
 
-void initialize_IDT (uint16_t code_descriptor);
+void IDT_initialize (void);
 
 #endif
