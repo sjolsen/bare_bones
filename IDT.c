@@ -30,15 +30,7 @@ IDT_entry make_IDT_entry (void (*address) (void), uint16_t code_selector)
 	};
 }
 
-static
-void install_IDT (const IDT_entry* base, uint16_t entries)
-{
-	struct __attribute__ ((packed)) {
-		uint16_t length;
-		uint32_t base;
-	} IDT = {entries * sizeof (IDT_entry), (uintptr_t) base};
-	__asm__ ("lidt (%0)" :: "p" (&IDT)); // FIXME: Breaks -Os
-}
+void install_IDT (const IDT_entry* base, uint16_t entries);
 
 
 // Extern functions

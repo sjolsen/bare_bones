@@ -50,15 +50,7 @@ GDT_entry make_data_GDT (uint32_t base, uint32_t limit,
 	};
 }
 
-static
-void install_GDT (const GDT_entry* base, uint16_t entries)
-{
-	struct __attribute__ ((packed)) {
-		uint16_t length;
-		uint32_t base;
-	} GDT = {entries * sizeof (GDT_entry), (uintptr_t) base};
-	__asm__ ("lgdt (%0)" :: "p" (&GDT)); // FIXME: Breaks -Os
-}
+void install_GDT (const GDT_entry* base, uint16_t entries);
 
 static
 void reload_segments (uint16_t code_selector, uint16_t data_selector)
