@@ -37,7 +37,7 @@ void install_IDT (const IDT_entry* base, uint16_t entries)
 		uint16_t length;
 		uint32_t base;
 	} IDT = {entries * sizeof (IDT_entry), (uintptr_t) base};
-	__asm__ ("lidt (%0)" :: "p" (&IDT));
+	__asm__ ("lidt (%0)" :: "p" (&IDT)); // FIXME: Breaks -Os
 }
 
 

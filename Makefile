@@ -3,7 +3,7 @@ OSNAME = "Bare Bones based on OSDev tutorial"
 AS = as
 ASFLAGS = -march=i686 --32
 CC = gcc
-CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Wall -Wextra -Werror
+CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Wall -Wextra -Werror # -Os
 LD = ld
 LDFLAGS = -march=i686 -melf_i386 -nostdlib
 

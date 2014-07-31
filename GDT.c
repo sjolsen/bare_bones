@@ -57,7 +57,7 @@ void install_GDT (const GDT_entry* base, uint16_t entries)
 		uint16_t length;
 		uint32_t base;
 	} GDT = {entries * sizeof (GDT_entry), (uintptr_t) base};
-	__asm__ ("lgdt (%0)" :: "p" (&GDT));
+	__asm__ ("lgdt (%0)" :: "p" (&GDT)); // FIXME: Breaks -Os
 }
 
 static
