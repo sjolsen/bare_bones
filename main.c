@@ -54,14 +54,14 @@ void debug_ISR (INT_index interrupt)
 	vga_putline (name [interrupt]);
 }
 
-bool basic_keyconsumer (keybuffer* kbuffer)
+bool basic_keyconsumer (cbuffer* kbuffer)
 {
-	if (keybuffer_empty (kbuffer))
+	if (cbuffer_empty (kbuffer))
 		return false;
 
 	char buffer [3];
 	vga_puts ("Scancode 0x");
-	vga_putline (format_uint (buffer, keybuffer_read (kbuffer), 2, 16));
+	vga_putline (format_uint (buffer, cbuffer_read (kbuffer), 2, 16));
 	return true;
 }
 
