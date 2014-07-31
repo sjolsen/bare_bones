@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 static
-void null_ISR (__attribute__ ((unused)) uint32_t interrupt)
+void null_ISR (__attribute__ ((unused)) INT_index interrupt)
 {
 }
 

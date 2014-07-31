@@ -49,7 +49,7 @@ typedef enum {
 	INT_LIMIT     = 0x30
 } INT_index;
 
-typedef void (*ISR_t) (uint32_t);
+typedef void (*ISR_t) (INT_index);
 extern ISR_t ISR_table [0x30];
 
 void ISR_table_initialize (ISR_t default_ISR);

@@ -13,7 +13,7 @@ bool null_kconsumer (__attribute__ ((unused)) keybuffer* kbuffer)
 }
 
 static
-void ISR_keyboard (__attribute__ ((unused)) uint32_t interrupt)
+void ISR_keyboard (__attribute__ ((unused)) INT_index interrupt)
 {
 	// FIXME: Hardcoded constant
 	uint8_t code = inb (0x60);
