@@ -102,14 +102,13 @@ void serial_initialize (uint16_t port, uint16_t divisor)
 		.parity      = COM_PARITY_NONE,
 		.enable_DLAB = 0
 	});
-	/* outb (port + COM_FIFO_CONTROL, 0xC7);  // FIXME: "Enable FIFO, clear them, with 14-byte threshold" */
-	/* outb (port + COM_MODEM_CONTROL, 0x0B); // FIXME: "IRQs enabled, RTS/DSR set" */
 	serial_set_interrupts (port, (COM_interrupts) {
 		.data_available    = 1,
-		.transmitter_empty = 1,
+		.transmitter_empty = 0,
 		.break_error       = 0,
 		.status_change     = 0
 	});
+	IRQ_enable (IRQ_COM1);
 }
 
 
@@ -139,8 +138,8 @@ void debug_ISR (INT_index interrupt)
 		[0x20] = "IRQ_PIT",
 		[0x21] = "IRQ_keyboard",
 		[0x22] = "IRQ_cascade",
-		[0x23] = "IRQ_COM1",
-		[0x24] = "IRQ_COM2",
+		[0x23] = "IRQ_COM2",
+		[0x24] = "IRQ_COM1",
 		[0x25] = "IRQ_LPT2",
 		[0x26] = "IRQ_floppy",
 		[0x27] = "IRQ_LPT1",
@@ -172,6 +171,15 @@ bool basic_keyconsumer (cbuffer* kbuffer)
 	return true;
 }
 
+void serial_ISR (__attribute__ ((unused)) INT_index interrupt)
+{
+	if (inb (COM1 + COM_LINE_STATUS) & 1) {
+		char buffer [3];
+		vga_puts ("COM1: read 0x");
+		vga_putline (format_uint (buffer, inb (COM1 + COM_DATA), 2, 16));
+	}
+}
+
 void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 {
 	vga_initialize ();
@@ -179,10 +187,11 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	IDT_initialize ();
 	ISR_table_initialize (&debug_ISR);
 	keyboard_initialize (&basic_keyconsumer);
-	serial_initialize (COM1, 1);
+
+	serial_initialize (COM1, 3);
+	ISR_table [INT_COM1] = &serial_ISR;
 
 	IRQ_disable (IRQ_PIT);
-	IRQ_enable (IRQ_COM1);
 
 	__asm__ ("sti"); // Enable interrupts
 	while (true) {
