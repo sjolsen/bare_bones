@@ -75,8 +75,6 @@ void debug_ISR (INT_index interrupt)
 
 void ISR_table_initialize (ISR_t default_ISR)
 {
-	if (default_ISR == NULL)
-		default_ISR = &null_ISR;
 	for (size_t i = 0; i < INT_LIMIT; ++i)
 		ISR_table [i] = default_ISR;
 }

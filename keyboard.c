@@ -7,12 +7,6 @@ static cbuffer kbuffer;
 static keyboard_consumer_t kconsumer;
 
 static
-bool null_kconsumer (__attribute__ ((unused)) cbuffer* kbuffer)
-{
-	return false;
-}
-
-static
 void ISR_keyboard (__attribute__ ((unused)) INT_index interrupt)
 {
 	// FIXME: Hardcoded constant
@@ -26,7 +20,7 @@ void ISR_keyboard (__attribute__ ((unused)) INT_index interrupt)
 void keyboard_initialize (keyboard_consumer_t consumer)
 {
 	kbuffer = make_cbuffer ();
-	kconsumer = (consumer ? consumer : &null_kconsumer);
+	kconsumer = consumer;
 	ISR_table [INT_keyboard] = &ISR_keyboard;
 	IRQ_enable (1);
 }
