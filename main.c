@@ -188,7 +188,7 @@ bool basic_COM1_consumer (void)
 
 void serial_ISR (__attribute__ ((unused)) INT_index interrupt)
 {
-	if (inb (COM1 + COM_LINE_STATUS) & 1) {
+	while (inb (COM1 + COM_LINE_STATUS) & 1) {
 		if (cbuffer_full (&COM1_buffer))
 			basic_COM1_consumer ();
 		cbuffer_write (&COM1_buffer, (inb (COM1 + COM_DATA)));
