@@ -41,75 +41,98 @@ enum {
 	COM_PARITY_ODD   = 0b00001000,
 	COM_PARITY_EVEN  = 0b00011000,
 	COM_PARITY_MARK  = 0b00101000,
-	COM_PARITY_SPACE = 0b00111000
+	COM_PARITY_SPACE = 0b00111000,
+
+	// FIFO control
+	COM_FIFO_TRIGGER_1_BYTE  = 0,
+	COM_FIFO_TRIGGER_4_BYTE  = 1,
+	COM_FIFO_TRIGGER_8_BYTE  = 2,
+	COM_FIFO_TRIGGER_14_BYTE = 3,
+
+	// Interrupts
+	COM_INT_LINE_STATUS       = 0b0110, // Read Line Status register
+	COM_INT_DATA_AVAILABLE    = 0b0100, // Read Receiver Buffer register
+	COM_INT_RECEIVER_TIMEOUT  = 0b1100, // Read Receiver Buffer register
+	COM_INT_TRANSMITTER_EMPTY = 0b0010, // Read Interrupt ID register
+	COM_INT_MODEM_STATUS      = 0b0000, // Read Modem Status register
 };
 
-typedef struct {
-	uint8_t data_available    : 1;
-	uint8_t transmitter_empty : 1;
-	uint8_t break_error       : 1;
-	uint8_t status_change     : 1;
-	uint8_t unused            : 4;
+typedef union {
+	struct {
+		uint8_t data_available    : 1;
+		uint8_t transmitter_empty : 1;
+		uint8_t break_error       : 1;
+		uint8_t status_change     : 1;
+		uint8_t unused            : 4;
+	};
+	uint8_t value;
 } COM_interrupts;
 
-typedef struct {
-	uint8_t char_length : 2;
-	uint8_t stop_length : 1;
-	uint8_t parity      : 3;
-	uint8_t unused      : 1;
-	uint8_t enable_DLAB : 1;
+typedef union {
+	struct {
+		uint8_t char_length : 2;
+		uint8_t stop_length : 1;
+		uint8_t parity      : 3;
+		uint8_t unused      : 1;
+		uint8_t enable_DLAB : 1;
+	};
+	uint8_t value;
 } COM_line_control;
 
-void serial_set_interrupts (uint16_t port, COM_interrupts interrupts)
-{
-	union {
-		COM_interrupts interrupts;
-		uint8_t value;
-	} u = {.interrupts = interrupts};
-	outb (port + COM_INTERRUPT_ENABLE, u.value);
-}
-
-void serial_set_line_control (uint16_t port, COM_line_control line_control)
-{
-	union {
-		COM_line_control line_control;
-		uint8_t value;
-	} u = {.line_control = line_control};
-	outb (port + COM_LINE_CONTROL, u.value);
-}
+typedef union {
+	struct {
+		uint8_t enable_fifo       : 1;
+		uint8_t reset_receiver    : 1;
+		uint8_t reset_transmitter : 1;
+		uint8_t DMA_mode_select   : 1;
+		uint8_t unused            : 2;
+		uint8_t receiver_trigger  : 2;
+	};
+	uint8_t value;
+} COM_fifo_control;
 
 void serial_setrate (uint16_t port, uint16_t divisor)
 {
-	serial_set_line_control (port, (COM_line_control) {
+	outb (port + COM_LINE_CONTROL, ((COM_line_control) {{
 		.enable_DLAB = 1
-	});
+	}}).value);
 	outb (port + COM_DLAB_DIVISOR_LOW, divisor & 0xFF);
 	outb (port + COM_DLAB_DIVISOR_HIGH, (divisor >> 8) & 0xFF);
 }
 
 void serial_initialize (uint16_t port, uint16_t divisor)
 {
-	serial_set_interrupts (port, (COM_interrupts) {
+	// Disable interrupts
+	outb (port + COM_INTERRUPT_ENABLE, ((COM_interrupts) {{
 		.data_available    = 0,
 		.transmitter_empty = 0,
 		.break_error       = 0,
 		.status_change     = 0
-	});
+	}}).value);
+	// Set the baud rate
 	serial_setrate (port, divisor);
-	serial_set_line_control (port, (COM_line_control) {
+	// Set the line discipline
+	outb (port + COM_LINE_CONTROL, ((COM_line_control) {{
 		.char_length = COM_CHAR_8_BIT,
 		.stop_length = COM_STOP_1_BIT,
 		.parity      = COM_PARITY_NONE,
 		.enable_DLAB = 0
-	});
-	serial_set_interrupts (port, (COM_interrupts) {
+	}}).value);
+	// Enable and clear FIFO
+	outb (port + COM_FIFO_CONTROL, ((COM_fifo_control) {{
+		.enable_fifo       = 1,
+		.reset_receiver    = 1,
+		.reset_transmitter = 1,
+		.DMA_mode_select   = 0,
+		.receiver_trigger  = COM_FIFO_TRIGGER_14_BYTE
+	}}).value);
+	// Reenable interrupts
+	outb (port + COM_INTERRUPT_ENABLE, ((COM_interrupts) {{
 		.data_available    = 1,
 		.transmitter_empty = 0,
 		.break_error       = 0,
 		.status_change     = 0
-	});
-	outb(port + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-	outb(port + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+	}}).value);
 	IRQ_enable (IRQ_COM1);
 }
 
