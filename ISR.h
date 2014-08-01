@@ -52,6 +52,9 @@ typedef enum {
 typedef void (*ISR_t) (INT_index);
 extern ISR_t ISR_table [INT_LIMIT];
 
+void null_ISR (INT_index interrupt);
+void debug_ISR (INT_index interrupt);
+
 void ISR_table_initialize (ISR_t default_ISR);
 
 #endif
