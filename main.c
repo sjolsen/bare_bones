@@ -21,6 +21,8 @@ bool basic_keyconsumer (cbuffer* kbuffer)
 	return true;
 }
 
+enum { COM1_BUFFER_SIZE = 32 };
+static uint8_t COM1_buffer_store [COM1_BUFFER_SIZE];
 static cbuffer COM1_buffer;
 
 bool basic_COM1_consumer (void)
@@ -42,6 +44,15 @@ void ISR_serial (__attribute__ ((unused)) INT_index interrupt)
 			basic_COM1_consumer ();
 		cbuffer_write (&COM1_buffer, (inb (COM1 + COM_DATA)));
 	}
+}
+
+static uint32_t counter = 0;
+
+void ISR_PIT (__attribute__ ((unused)) INT_index interrupt)
+{
+	char buffer [11];
+	vga_putline (format_uint (buffer, counter, 0, 10));
+	++counter;
 }
 
 void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
@@ -73,7 +84,7 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	UART_PC16550D_initialize (COM1, 1, line_8N1, interrupts, fifoctl);
 	ISR_table [INT_COM1] = &ISR_serial;
 	IRQ_enable (IRQ_COM1);
-	COM1_buffer = make_cbuffer ();
+	COM1_buffer = make_cbuffer (COM1_buffer_store, COM1_BUFFER_SIZE);
 
 	IRQ_disable (IRQ_PIT);
 
