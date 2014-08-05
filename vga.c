@@ -76,15 +76,17 @@ void vga_scroll (size_t lines)
 
 void vga_putchar (char c)
 {
-	switch (c)
-	{
-	case '\n':
+	if (c == '\n')
 		vga_advance_line ();
-		break;
-	default:
+	else if (!ascii_printable (c)) {
+		vga_color oldcolor = vga_getcolor ();
+		vga_setcolor (make_vga_color (COLOR_RED, oldcolor.bg));
+		vga_putchar ('?');
+		vga_setcolor (oldcolor);
+	}
+	else {
 		vga_putraw (c, vga_current_color, vga_current_column, vga_current_row);
 		vga_advance_char ();
-		break;
 	}
 }
 

@@ -1,11 +1,12 @@
 #include "ddump.h"
 #include "vga.h"
 #include "format.h"
+#include "string.h"
 
 static inline
 void sanitarily_print_char (char c)
 {
-	if (' ' <= c && c < 127) {
+	if (ascii_printable (c)) {
 		vga_color oldcolor = vga_getcolor ();
 		vga_setcolor (make_vga_color (COLOR_WHITE, oldcolor.bg));
 		vga_putchar (c);
