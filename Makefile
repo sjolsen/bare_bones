@@ -1,5 +1,3 @@
-OSNAME = "Bare Bones based on OSDev tutorial"
-
 AS = as
 ASFLAGS = -march=i686 --32
 CC = gcc
@@ -29,9 +27,11 @@ cleandeps:
 	rm -f $(DEPENDS)
 
 kernel.bin: kernel.ld $(DEPENDS) $(OBJECTS)
-	$(LD) $(LDFLAGS) -T $< -o $@ $(OBJECTS)
+	$(LD) $(LDFLAGS) -T $< -o $@ $(OBJECTS) --gc-sections #--print-gc-sections
 
 -include $(DEPENDS)
+
+$(OBJECTS): Makefile
 
 %.c.d: %.c
 	$(CC) -MM $< | sed -e 's/\.o:/.c.o:/' > $@
