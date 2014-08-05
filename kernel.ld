@@ -16,14 +16,13 @@ SECTIONS
 	.text BLOCK(4K) : ALIGN(4K)
 	{
 		*(.multiboot)
-		*(.text)
-                *(.text.isr)
+		*(.text*)
 	}
 
 	/* Read-only data. */
 	.rodata BLOCK(4K) : ALIGN(4K)
 	{
-		*(.rodata)
+		*(.rodata*)
 	}
 
 	/* Read-write data (initialized) */
@@ -47,5 +46,7 @@ SECTIONS
 	/DISCARD/ :
 	{
 		*(.eh_frame)
+		*(.note)
+		*(.comment)
 	}
 }

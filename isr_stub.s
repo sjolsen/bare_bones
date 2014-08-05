@@ -1,18 +1,19 @@
 .section .text.isr
 
 # Declare an interrupt handler delegating to C
+_ISR_entry:
+	call ISR_entry
+	popl %eax
+	popal
+	iret
+
 	.macro .isr number name
 	.global \name
 	.type \name, @function
 \name:
-	pushal
-        mov \number, %eax
-        pushl %eax
-	call ISR_entry
-        popl %eax
-	popal
-	iret
-	.size \name, . - \name
+        pushal
+        pushl \number
+        jmp _ISR_entry
 	.endm
 
 # Wrapped ISRs
