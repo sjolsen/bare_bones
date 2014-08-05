@@ -37,7 +37,7 @@ char* format_int (char* buffer, int32_t value, uint_fast8_t mincol, uint_fast8_t
 		return numstring;
 	}
 	else
-		return format_uint (buffer + 1, value, mincol, base);
+		return format_uint (buffer, value, mincol, base);
 }
 
 char* format_uint (char* buffer, uint32_t value, uint_fast8_t mincol, uint_fast8_t base)
