@@ -28,8 +28,8 @@ clean:
 cleandeps:
 	rm -f $(DEPENDS)
 
-kernel.bin: $(DEPENDS) $(OBJECTS)
-	$(LD) $(LDFLAGS) -T kernel.ld -o $@ $(OBJECTS)
+kernel.bin: kernel.ld $(DEPENDS) $(OBJECTS)
+	$(LD) $(LDFLAGS) -T $< -o $@ $(OBJECTS)
 
 -include $(DEPENDS)
 
