@@ -34,7 +34,7 @@ kernel.bin: kernel.ld $(DEPENDS) $(OBJECTS)
 $(OBJECTS): Makefile
 
 %.c.d: %.c
-	$(CC) -MM $< | sed -e 's/\.o:/.c.o:/' > $@
+	$(CC) -MM $< | sed 's/^\(.*\)\.o:/\1.c.d \1.c.o:/' > $@
 
 %.c.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
