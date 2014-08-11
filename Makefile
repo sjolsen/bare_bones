@@ -15,9 +15,10 @@ ASMOBJECTS := $(patsubst %.s,%.s.o,$(ASMSOURCES))
 DEPENDS := $(CDEPENDS)
 OBJECTS := $(COBJECTS) $(ASMOBJECTS)
 
-.PHONY: all test clean cleandeps
+.PHONY: all depends test clean cleandeps
 
 all: kernel.bin
+depends: $(DEPENDS)
 test: kernel.bin
 	qemu-system-i386 -kernel $<
 
@@ -26,7 +27,7 @@ clean:
 cleandeps:
 	rm -f $(DEPENDS)
 
-kernel.bin: kernel.ld $(DEPENDS) $(OBJECTS)
+kernel.bin: kernel.ld $(OBJECTS)
 	$(LD) $(LDFLAGS) -T $< -o $@ $(OBJECTS) --gc-sections #--print-gc-sections
 
 -include $(DEPENDS)
