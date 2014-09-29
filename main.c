@@ -94,6 +94,4 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 		      basic_COM1_consumer ()))
 			__asm__ ("sti\nhlt");
 	}
-
-	vga_putline ("System halt");
 }
