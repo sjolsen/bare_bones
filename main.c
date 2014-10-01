@@ -8,51 +8,38 @@
 #include "format.h"
 #include "PC16550D.h"
 #include "portio.h"
-#include "cbuffer.h"
 
-bool basic_keyconsumer (cbuffer* kbuffer)
-{
-	if (cbuffer_empty (kbuffer))
-		return false;
-
-	char buffer [3];
-	vga_puts ("Scancode 0x");
-	vga_putline (format_uint (buffer, cbuffer_read (kbuffer), 2, 16));
-	return true;
-}
-
-enum { COM1_BUFFER_SIZE = 32 };
-static uint8_t COM1_buffer_store [COM1_BUFFER_SIZE];
-static cbuffer COM1_buffer;
-
-bool basic_COM1_consumer (void)
-{
-	bool did_work = false;
-	while (!cbuffer_empty (&COM1_buffer)) {
-		uint8_t data = cbuffer_read (&COM1_buffer);
-//		vga_putchar (data);
-		outb (COM1 + COM_DATA, data);
-		did_work = true;
-	}
-	return did_work;
-}
-
-void ISR_serial (__attribute__ ((unused)) INT_index interrupt)
-{
-	while (inb (COM1 + COM_LINE_STATUS) & 1) {
-		if (cbuffer_full (&COM1_buffer))
-			basic_COM1_consumer ();
-		cbuffer_write (&COM1_buffer, (inb (COM1 + COM_DATA)));
-	}
-}
-
-static uint32_t counter = 0;
+#define ARRAYLEN(a) (sizeof (a) / sizeof (*a))
 
 void ISR_PIT (__attribute__ ((unused)) INT_index interrupt)
 {
-	char buffer [11];
-	vga_putline (format_uint (buffer, counter, 0, 10));
-	++counter;
+	static const char sdata [] = "Hello, Rainbow Dance Party OS!\n";
+	static const size_t slength = ARRAYLEN (sdata) - 1;
+	static size_t scursor = 0;
+
+	static const vga_color_code cdata [] = {
+		COLOR_LIGHT_RED,
+		COLOR_RED,
+		COLOR_BROWN,
+		COLOR_LIGHT_BROWN,
+		COLOR_LIGHT_GREEN,
+		COLOR_GREEN,
+		COLOR_CYAN,
+		COLOR_LIGHT_BLUE,
+		COLOR_BLUE,
+		COLOR_MAGENTA,
+		COLOR_LIGHT_MAGENTA
+	};
+	static const size_t clength = ARRAYLEN (cdata);
+	static size_t ccursor = 0;
+
+	vga_setcolor (make_vga_color (cdata [ccursor], COLOR_BLACK));
+	vga_putchar (sdata [scursor]);
+	if (++scursor == slength) {
+		scursor = 0;
+		if (++ccursor == clength)
+			ccursor = 0;
+	}
 }
 
 void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
@@ -60,38 +47,13 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	vga_initialize ();
 	GDT_initialize ();
 	IDT_initialize ();
-	ISR_table_initialize (&debug_ISR);
-	keyboard_initialize (&basic_keyconsumer);
+	ISR_table_initialize (&null_ISR);
 
-	COM_line_control line_8N1 = {{
-		.char_length = COM_CHAR_8_BIT,
-		.stop_length = COM_STOP_1_BIT,
-		.parity      = COM_PARITY_NONE
-	}};
-	COM_interrupts interrupts = {{
-		.data_available    = 1,
-		.transmitter_empty = 0,
-		.break_error       = 0,
-		.status_change     = 0
-	}};
-	COM_fifo_control fifoctl = {{
-		.enable_fifo       = 1,
-		.reset_receiver    = 1,
-		.reset_transmitter = 1,
-		.DMA_mode_select   = 0,
-		.receiver_trigger  = COM_FIFO_TRIGGER_8_BYTE
-	}};
-	UART_PC16550D_initialize (COM1, 1, line_8N1, interrupts, fifoctl);
-	ISR_table [INT_COM1] = &ISR_serial;
-	IRQ_enable (IRQ_COM1);
-	COM1_buffer = make_cbuffer (COM1_buffer_store, COM1_BUFFER_SIZE);
+	ISR_table [INT_PIT] = &ISR_PIT;
+	IRQ_enable (IRQ_PIT);
 
-	IRQ_disable (IRQ_PIT);
+	__asm__ ("sti");
+	while (true)
+		__asm__ ("hlt");
 
-	while (true) {
-		__asm__ ("cli");
-		if (!(keyboard_consume () ||
-		      basic_COM1_consumer ()))
-			__asm__ ("sti\nhlt");
-	}
 }
