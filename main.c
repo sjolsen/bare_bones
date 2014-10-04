@@ -9,15 +9,57 @@
 #include "PC16550D.h"
 #include "portio.h"
 #include "cbuffer.h"
+#include "string.h"
+#include "scancode.h"
+
+static inline
+void sanitarily_print_char (char c)
+{
+	if (ascii_printable (c))
+		vga_putchar (c);
+	else {
+		vga_color oldcolor = vga_getcolor ();
+		vga_setcolor (make_vga_color (oldcolor.bg, oldcolor.fg));
+		vga_putchar (c ^ 0b100000);
+		vga_setcolor (oldcolor);
+	}
+}
+
+static inline
+void send_COM1 (uint8_t byte)
+{
+	outb (COM1 + COM_DATA, byte);
+}
+
+static scancode_decoder_state dstate;
 
 bool basic_keyconsumer (cbuffer* kbuffer)
 {
 	if (cbuffer_empty (kbuffer))
 		return false;
 
-	char buffer [3];
-	vga_puts ("Scancode 0x");
-	vga_putline (format_uint (buffer, cbuffer_read (kbuffer), 2, 16));
+	#define INRANGE(x,a,b) ((a) <= (x) && (x) <= (b))
+	while (!cbuffer_empty (kbuffer)) {
+		key_event e = scancode_decode (&dstate, cbuffer_read (kbuffer));
+
+		if (e.type == TYPE_PRESSED) {
+			if (INRANGE (e.key, KEY_1, KEY_EQUAL))
+				vga_putchar ("1234567890-=" [e.key - KEY_1]);
+			else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
+				vga_putchar ("QWERTYUIOP[]\n" [e.key - KEY_Q]);
+			else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
+				vga_putchar ("ASDFGHJKL;'`" [e.key - KEY_A]);
+			else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
+				vga_putchar ("\\ZXCVBNM,./" [e.key - KEY_BACKSLASH]);
+			else if (e.key == KEY_SPACE)
+				vga_putchar (' ');
+			/* else */
+			/* 	vga_putline ("Key pressed"); */
+		}
+		/* else if (e.type == TYPE_RELEASED) */
+		/* 	vga_putline ("Key released"); */
+	}
+
 	return true;
 }
 
@@ -30,8 +72,7 @@ bool basic_COM1_consumer (void)
 	bool did_work = false;
 	while (!cbuffer_empty (&COM1_buffer)) {
 		uint8_t data = cbuffer_read (&COM1_buffer);
-//		vga_putchar (data);
-		outb (COM1 + COM_DATA, data);
+		sanitarily_print_char (data);
 		did_work = true;
 	}
 	return did_work;
@@ -62,6 +103,7 @@ void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
 	IDT_initialize ();
 	ISR_table_initialize (&debug_ISR);
 	keyboard_initialize (&basic_keyconsumer);
+	dstate = make_decoder_state ();
 
 	COM_line_control line_8N1 = {{
 		.char_length = COM_CHAR_8_BIT,

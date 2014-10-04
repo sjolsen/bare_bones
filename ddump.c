@@ -6,14 +6,14 @@
 static inline
 void sanitarily_print_char (char c)
 {
-	if (ascii_printable (c)) {
-		vga_color oldcolor = vga_getcolor ();
-		vga_setcolor (make_vga_color (COLOR_WHITE, oldcolor.bg));
+	if (ascii_printable (c))
 		vga_putchar (c);
+	else {
+		vga_color oldcolor = vga_getcolor ();
+		vga_setcolor (make_vga_color (oldcolor.bg, oldcolor.fg));
+		vga_putchar (c ^ 0b100);
 		vga_setcolor (oldcolor);
 	}
-	else
-		vga_putchar ('.');
 }
 
 static
