@@ -32,6 +32,8 @@ void send_COM1 (uint8_t byte)
 }
 
 static scancode_decoder_state dstate;
+static bool lshift = false;
+static bool rshift = false;
 
 bool basic_keyconsumer (cbuffer* kbuffer)
 {
@@ -43,21 +45,41 @@ bool basic_keyconsumer (cbuffer* kbuffer)
 		key_event e = scancode_decode (&dstate, cbuffer_read (kbuffer));
 
 		if (e.type == TYPE_PRESSED) {
-			if (INRANGE (e.key, KEY_1, KEY_EQUAL))
-				vga_putchar ("1234567890-=" [e.key - KEY_1]);
-			else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
-				vga_putchar ("QWERTYUIOP[]\n" [e.key - KEY_Q]);
-			else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
-				vga_putchar ("ASDFGHJKL;'`" [e.key - KEY_A]);
-			else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
-				vga_putchar ("\\ZXCVBNM,./" [e.key - KEY_BACKSLASH]);
-			else if (e.key == KEY_SPACE)
-				vga_putchar (' ');
-			/* else */
-			/* 	vga_putline ("Key pressed"); */
+			if (e.key == KEY_LEFT_SHIFT)
+				lshift = true;
+			else if (e.key == KEY_RIGHT_SHIFT)
+				rshift = true;
+			else if (lshift || rshift) {
+				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
+					vga_putchar ("!@#$%^&*()_+" [e.key - KEY_1]);
+				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
+					vga_putchar ("QWERTYUIOP{}\n" [e.key - KEY_Q]);
+				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
+					vga_putchar ("ASDFGHJKL:\"~" [e.key - KEY_A]);
+				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
+					vga_putchar ("|ZXCVBNM<>?" [e.key - KEY_BACKSLASH]);
+				else if (e.key == KEY_SPACE)
+					vga_putchar (' ');
+			}
+			else {
+				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
+					vga_putchar ("1234567890-=" [e.key - KEY_1]);
+				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
+					vga_putchar ("qwertyuiop[]\n" [e.key - KEY_Q]);
+				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
+					vga_putchar ("asdfghjkl;'`" [e.key - KEY_A]);
+				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
+					vga_putchar ("\\zxcvbnm,./" [e.key - KEY_BACKSLASH]);
+				else if (e.key == KEY_SPACE)
+					vga_putchar (' ');
+			}
 		}
-		/* else if (e.type == TYPE_RELEASED) */
-		/* 	vga_putline ("Key released"); */
+		else if (e.type == TYPE_RELEASED) {
+			if (e.key == KEY_LEFT_SHIFT)
+				lshift = false;
+			else if (e.key == KEY_RIGHT_SHIFT)
+				rshift = false;
+		}
 	}
 
 	return true;
