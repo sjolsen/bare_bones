@@ -15,7 +15,7 @@
 static inline
 void sanitarily_print_char (char c)
 {
-	if (ascii_printable (c))
+	if (ascii_printable (c) || c == '\n')
 		vga_putchar (c);
 	else {
 		vga_color oldcolor = vga_getcolor ();
@@ -51,27 +51,27 @@ bool basic_keyconsumer (cbuffer* kbuffer)
 				rshift = true;
 			else if (lshift || rshift) {
 				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
-					vga_putchar ("!@#$%^&*()_+" [e.key - KEY_1]);
+					send_COM1 ("!@#$%^&*()_+" [e.key - KEY_1]);
 				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
-					vga_putchar ("QWERTYUIOP{}\n" [e.key - KEY_Q]);
+					send_COM1 ("QWERTYUIOP{}\n" [e.key - KEY_Q]);
 				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
-					vga_putchar ("ASDFGHJKL:\"~" [e.key - KEY_A]);
+					send_COM1 ("ASDFGHJKL:\"~" [e.key - KEY_A]);
 				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
-					vga_putchar ("|ZXCVBNM<>?" [e.key - KEY_BACKSLASH]);
+					send_COM1 ("|ZXCVBNM<>?" [e.key - KEY_BACKSLASH]);
 				else if (e.key == KEY_SPACE)
-					vga_putchar (' ');
+					send_COM1 (' ');
 			}
 			else {
 				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
-					vga_putchar ("1234567890-=" [e.key - KEY_1]);
+					send_COM1 ("1234567890-=" [e.key - KEY_1]);
 				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
-					vga_putchar ("qwertyuiop[]\n" [e.key - KEY_Q]);
+					send_COM1 ("qwertyuiop[]\n" [e.key - KEY_Q]);
 				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
-					vga_putchar ("asdfghjkl;'`" [e.key - KEY_A]);
+					send_COM1 ("asdfghjkl;'`" [e.key - KEY_A]);
 				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
-					vga_putchar ("\\zxcvbnm,./" [e.key - KEY_BACKSLASH]);
+					send_COM1 ("\\zxcvbnm,./" [e.key - KEY_BACKSLASH]);
 				else if (e.key == KEY_SPACE)
-					vga_putchar (' ');
+					send_COM1 (' ');
 			}
 		}
 		else if (e.type == TYPE_RELEASED) {
