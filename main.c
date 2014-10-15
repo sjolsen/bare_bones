@@ -4,158 +4,126 @@
 #include "IDT.h"
 #include "ISR.h"
 #include "IRQ.h"
-#include "keyboard.h"
 #include "format.h"
-#include "PC16550D.h"
-#include "portio.h"
-#include "cbuffer.h"
-#include "string.h"
-#include "scancode.h"
+#include "ddump.h"
 
-static inline
-void sanitarily_print_char (char c)
+#define ARRAY_LENGTH(a) (sizeof (a) / sizeof (*a))
+
+void print_multiboot_magic (uint32_t magic)
 {
-	if (ascii_printable (c) || c == '\n')
-		vga_putchar (c);
-	else {
-		vga_color oldcolor = vga_getcolor ();
-		vga_setcolor (make_vga_color (oldcolor.bg, oldcolor.fg));
-		vga_putchar (c ^ 0b100000);
-		vga_setcolor (oldcolor);
-	}
+	vga_puts ("Magic:\n  ");
+	vga_color oldcolor = vga_getcolor ();
+	if (magic == MULTIBOOT_BOOTLOADER_MAGIC)
+		vga_setcolor (make_vga_color (COLOR_GREEN, oldcolor.bg));
+	else
+		vga_setcolor (make_vga_color (COLOR_RED, oldcolor.bg));
+	vga_puts ("0x");
+	char buffer [9];
+	vga_putline (format_uint (buffer, magic, 8, 16));
+	vga_setcolor (oldcolor);
 }
 
-static inline
-void send_COM1 (uint8_t byte)
+void print_multiboot_flags (const multiboot_info_t* info)
 {
-	outb (COM1 + COM_DATA, byte);
-}
+	static const char* flagnames [] = {
+		"MULTIBOOT_INFO_MEMORY",
+		"MULTIBOOT_INFO_BOOTDEV",
+		"MULTIBOOT_INFO_CMDLINE",
+		"MULTIBOOT_INFO_MODS",
+		"MULTIBOOT_INFO_AOUT_SYMS",
+		"MULTIBOOT_INFO_ELF_SHDR",
+		"MULTIBOOT_INFO_MEM_MAP",
+		"MULTIBOOT_INFO_DRIVE_INFO",
+		"MULTIBOOT_INFO_CONFIG_TABLE",
+		"MULTIBOOT_INFO_BOOT_LOADER_NAME",
+		"MULTIBOOT_INFO_APM_TABLE",
+		"MULTIBOOT_INFO_VBE_INFO",
+		"MULTIBOOT_INFO_FRAMEBUFFER_INFO"
+	};
 
-static scancode_decoder_state dstate;
-static bool lshift = false;
-static bool rshift = false;
-
-bool basic_keyconsumer (cbuffer* kbuffer)
-{
-	if (cbuffer_empty (kbuffer))
-		return false;
-
-	#define INRANGE(x,a,b) ((a) <= (x) && (x) <= (b))
-	while (!cbuffer_empty (kbuffer)) {
-		key_event e = scancode_decode (&dstate, cbuffer_read (kbuffer));
-
-		if (e.type == TYPE_PRESSED) {
-			if (e.key == KEY_LEFT_SHIFT)
-				lshift = true;
-			else if (e.key == KEY_RIGHT_SHIFT)
-				rshift = true;
-			else if (lshift || rshift) {
-				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
-					send_COM1 ("!@#$%^&*()_+" [e.key - KEY_1]);
-				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
-					send_COM1 ("QWERTYUIOP{}\n" [e.key - KEY_Q]);
-				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
-					send_COM1 ("ASDFGHJKL:\"~" [e.key - KEY_A]);
-				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
-					send_COM1 ("|ZXCVBNM<>?" [e.key - KEY_BACKSLASH]);
-				else if (e.key == KEY_SPACE)
-					send_COM1 (' ');
-			}
-			else {
-				if (INRANGE (e.key, KEY_1, KEY_EQUAL))
-					send_COM1 ("1234567890-=" [e.key - KEY_1]);
-				else if (INRANGE (e.key, KEY_Q, KEY_ENTER))
-					send_COM1 ("qwertyuiop[]\n" [e.key - KEY_Q]);
-				else if (INRANGE (e.key, KEY_A, KEY_BACKTICK))
-					send_COM1 ("asdfghjkl;'`" [e.key - KEY_A]);
-				else if (INRANGE (e.key, KEY_BACKSLASH, KEY_SLASH))
-					send_COM1 ("\\zxcvbnm,./" [e.key - KEY_BACKSLASH]);
-				else if (e.key == KEY_SPACE)
-					send_COM1 (' ');
-			}
+	vga_putline ("Flags:");
+	size_t index = 0;
+	uint32_t mask = 1;
+	while (index < ARRAY_LENGTH (flagnames)) {
+		if (info->flags & mask) {
+			vga_puts ("  ");
+			vga_putline (flagnames [index]);
 		}
-		else if (e.type == TYPE_RELEASED) {
-			if (e.key == KEY_LEFT_SHIFT)
-				lshift = false;
-			else if (e.key == KEY_RIGHT_SHIFT)
-				rshift = false;
-		}
-	}
-
-	return true;
-}
-
-enum { COM1_BUFFER_SIZE = 32 };
-static uint8_t COM1_buffer_store [COM1_BUFFER_SIZE];
-static cbuffer COM1_buffer;
-
-bool basic_COM1_consumer (void)
-{
-	bool did_work = false;
-	while (!cbuffer_empty (&COM1_buffer)) {
-		uint8_t data = cbuffer_read (&COM1_buffer);
-		sanitarily_print_char (data);
-		did_work = true;
-	}
-	return did_work;
-}
-
-void ISR_serial (__attribute__ ((unused)) INT_index interrupt)
-{
-	while (inb (COM1 + COM_LINE_STATUS) & 1) {
-		if (cbuffer_full (&COM1_buffer))
-			basic_COM1_consumer ();
-		cbuffer_write (&COM1_buffer, (inb (COM1 + COM_DATA)));
+		++index;
+		mask <<= 1;
 	}
 }
 
-static uint32_t counter = 0;
-
-void ISR_PIT (__attribute__ ((unused)) INT_index interrupt)
+const multiboot_memory_map_t* mmap_begin (const multiboot_info_t* info)
 {
-	char buffer [11];
-	vga_putline (format_uint (buffer, counter, 0, 10));
-	++counter;
+	return (const multiboot_memory_map_t*) info->mmap_addr;
 }
 
-void kernel_main (/* multiboot_info_t* info, uint32_t magic */)
+const multiboot_memory_map_t* mmap_end (const multiboot_info_t* info)
 {
-	vga_initialize ();
+	return (const multiboot_memory_map_t*) (info->mmap_addr + info->mmap_length);
+}
+
+const multiboot_memory_map_t* mmap_next (const multiboot_memory_map_t* map)
+{
+	uint32_t size = map->size + sizeof (map->size);
+	const char* map_addr = (const char*) map;
+	const char* next_addr = map_addr + size;
+	return (const multiboot_memory_map_t*) next_addr;
+}
+
+void print_multiboot_memmap_entry (const multiboot_memory_map_t* map)
+{
+	static const char* typenames [] = {
+		NULL,
+		"AVAILABLE       ",
+		"RESERVED        ",
+		"ACPI_RECLAIMABLE",
+		"NVS             ",
+		"BADRAM          "
+	};
+
+	char buffer [9];
+	vga_puts ("  ");
+	vga_puts (typenames [map->type]);
+	vga_puts (" [0x");
+	vga_puts (format_uint (buffer, map->addr >> 32, 8, 16));
+	vga_puts (format_uint (buffer, map->addr, 8, 16));
+	vga_puts (" - 0x");
+	vga_puts (format_uint (buffer, (map->addr + map->len - 1) >> 32, 8, 16));
+	vga_puts (format_uint (buffer, map->addr + map->len - 1, 8, 16));
+	vga_putline ("]");
+}
+
+void print_multiboot_memmap (const multiboot_info_t* info)
+{
+	if (!(info->flags & MULTIBOOT_INFO_MEM_MAP))
+		return;
+
+	vga_putline ("Memory map:");
+	for (const multiboot_memory_map_t* map = mmap_begin (info);
+	     map != mmap_end (info);
+	     map = mmap_next (map))
+		print_multiboot_memmap_entry (map);
+}
+
+void print_multiboot_info (const multiboot_info_t* info, uint32_t magic)
+{
+	print_multiboot_magic (magic);
+	if (info->flags & MULTIBOOT_INFO_BOOT_LOADER_NAME)
+		vga_putline ((const char*) info->boot_loader_name);
+
+	print_multiboot_flags (info);
+	print_multiboot_memmap (info);
+}
+
+void kernel_main (const multiboot_info_t* info, uint32_t magic)
+{
 	GDT_initialize ();
 	IDT_initialize ();
 	ISR_table_initialize (&debug_ISR);
-	keyboard_initialize (&basic_keyconsumer);
-	dstate = make_decoder_state ();
-
-	COM_line_control line_8N1 = {{
-		.char_length = COM_CHAR_8_BIT,
-		.stop_length = COM_STOP_1_BIT,
-		.parity      = COM_PARITY_NONE
-	}};
-	COM_interrupts interrupts = {{
-		.data_available    = 1,
-		.transmitter_empty = 0,
-		.break_error       = 0,
-		.status_change     = 0
-	}};
-	COM_fifo_control fifoctl = {{
-		.enable_fifo       = 1,
-		.reset_receiver    = 1,
-		.reset_transmitter = 1,
-		.DMA_mode_select   = 0,
-		.receiver_trigger  = COM_FIFO_TRIGGER_8_BYTE
-	}};
-	UART_PC16550D_initialize (COM1, 1, line_8N1, interrupts, fifoctl);
-	ISR_table [INT_COM1] = &ISR_serial;
-	IRQ_enable (IRQ_COM1);
-	COM1_buffer = make_cbuffer (COM1_buffer_store, COM1_BUFFER_SIZE);
-
+	vga_initialize ();
 	IRQ_disable (IRQ_PIT);
 
-	while (true) {
-		__asm__ ("cli");
-		if (!(keyboard_consume () ||
-		      basic_COM1_consumer ()))
-			__asm__ ("sti\nhlt");
-	}
+	print_multiboot_info (info, magic);
 }
