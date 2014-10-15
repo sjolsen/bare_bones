@@ -5,6 +5,9 @@ CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Os -Wall -Wextra -Werror
 LD = ld
 LDFLAGS = -march=i686 -melf_i386 -nostdlib
 
+NOROMFLAG = -netdev user,id=hostnet0 -device virtio-net-pci,romfile=,netdev=hostnet0 # Kill iPXE option ROM
+override QEMUFLAGS := $(NOROMFLAG) $(QEMUFLAGS)
+
 CSOURCES := $(wildcard *.c)
 COBJECTS := $(patsubst %.c,%.c.o,$(CSOURCES))
 CDEPENDS := $(patsubst %.c,%.c.d,$(CSOURCES))
@@ -20,7 +23,7 @@ OBJECTS := $(COBJECTS) $(ASMOBJECTS)
 all: kernel.bin
 depends: $(DEPENDS)
 test: kernel.bin
-	qemu-system-i386 -kernel $<
+	qemu-system-i386 -kernel $< $(QEMUFLAGS)
 
 clean:
 	rm -f kernel.bin $(OBJECTS)
