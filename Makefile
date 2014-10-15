@@ -1,12 +1,12 @@
 AS = as
-ASFLAGS = -march=i686 --32
+override ASFLAGS:=$(ASFLAGS) -march=i686 --32
 CC = gcc
-CFLAGS = -march=i686 -m32 -std=c99 -ffreestanding -Os -Wall -Wextra -Werror
+override CFLAGS:=$(CFLAGS) -march=i686 -m32 -std=c99 -ffreestanding -Os -Wall -Wextra -Werror
 LD = ld
-LDFLAGS = -march=i686 -melf_i386 -nostdlib
+override LDFLAGS:=$(LDFLAGS) -march=i686 -melf_i386 -nostdlib
 
 NOROMFLAG = -netdev user,id=hostnet0 -device virtio-net-pci,romfile=,netdev=hostnet0 # Kill iPXE option ROM
-override QEMUFLAGS := $(NOROMFLAG) $(QEMUFLAGS)
+override QEMUFLAGS:=$(NOROMFLAG) $(QEMUFLAGS)
 
 CSOURCES := $(wildcard *.c)
 COBJECTS := $(patsubst %.c,%.c.o,$(CSOURCES))
