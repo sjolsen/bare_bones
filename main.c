@@ -83,15 +83,13 @@ void print_multiboot_memmap_entry (const multiboot_memory_map_t* map)
 		"BADRAM          "
 	};
 
-	char buffer [9];
+	char buffer [17];
 	vga_puts ("  ");
 	vga_puts (typenames [map->type]);
 	vga_puts (" [0x");
-	vga_puts (format_uint (buffer, map->addr >> 32, 8, 16));
-	vga_puts (format_uint (buffer, map->addr, 8, 16));
+	vga_puts (format_uint (buffer, map->addr, 16, 16));
 	vga_puts (" - 0x");
-	vga_puts (format_uint (buffer, (map->addr + map->len - 1) >> 32, 8, 16));
-	vga_puts (format_uint (buffer, map->addr + map->len - 1, 8, 16));
+	vga_puts (format_uint (buffer, map->addr + map->len - 1, 16, 16));
 	vga_putline ("]");
 }
 
@@ -101,10 +99,23 @@ void print_multiboot_memmap (const multiboot_info_t* info)
 		return;
 
 	vga_putline ("Memory map:");
+	uint64_t memsize = 0;
+	uint64_t amemsize = 0;
 	for (const multiboot_memory_map_t* map = mmap_begin (info);
 	     map != mmap_end (info);
-	     map = mmap_next (map))
+	     map = mmap_next (map)) {
 		print_multiboot_memmap_entry (map);
+		memsize += map->len;
+		if (map->type == MULTIBOOT_MEMORY_AVAILABLE)
+			amemsize += map->len;
+	}
+
+	char buffer [21];
+	vga_puts ("  Total ");
+	vga_puts (format_uint (buffer, memsize, 0, 10));
+	vga_puts (" bytes (");
+	vga_puts (format_uint (buffer, amemsize, 0, 10));
+	vga_putline (" bytes available)");
 }
 
 void print_multiboot_info (const multiboot_info_t* info, uint32_t magic)
@@ -121,9 +132,11 @@ void kernel_main (const multiboot_info_t* info, uint32_t magic)
 {
 	GDT_initialize ();
 	IDT_initialize ();
-	ISR_table_initialize (&debug_ISR);
+	ISR_table_initialize (&null_ISR);
 	vga_initialize ();
+	ISR_table [INT_divide_by_zero] = &debug_ISR;
 	IRQ_disable (IRQ_PIT);
 
+	__asm__ ("sti"::);
 	print_multiboot_info (info, magic);
 }
