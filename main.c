@@ -182,5 +182,4 @@ void kernel_main (const multiboot_info_t* info, uint32_t magic)
 	__asm__ ("sti"::);
 	print_multiboot_info (info, magic);
 	print_vbe_info (info);
-
 }
