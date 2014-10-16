@@ -23,37 +23,6 @@ void print_multiboot_magic (uint32_t magic)
 	vga_setcolor (oldcolor);
 }
 
-void print_multiboot_flags (const multiboot_info_t* info)
-{
-	static const char* flagnames [] = {
-		"MULTIBOOT_INFO_MEMORY",
-		"MULTIBOOT_INFO_BOOTDEV",
-		"MULTIBOOT_INFO_CMDLINE",
-		"MULTIBOOT_INFO_MODS",
-		"MULTIBOOT_INFO_AOUT_SYMS",
-		"MULTIBOOT_INFO_ELF_SHDR",
-		"MULTIBOOT_INFO_MEM_MAP",
-		"MULTIBOOT_INFO_DRIVE_INFO",
-		"MULTIBOOT_INFO_CONFIG_TABLE",
-		"MULTIBOOT_INFO_BOOT_LOADER_NAME",
-		"MULTIBOOT_INFO_APM_TABLE",
-		"MULTIBOOT_INFO_VBE_INFO",
-		"MULTIBOOT_INFO_FRAMEBUFFER_INFO"
-	};
-
-	vga_putline ("Flags:");
-	size_t index = 0;
-	uint32_t mask = 1;
-	while (index < ARRAY_LENGTH (flagnames)) {
-		if (info->flags & mask) {
-			vga_puts ("  ");
-			vga_putline (flagnames [index]);
-		}
-		++index;
-		mask <<= 1;
-	}
-}
-
 const multiboot_memory_map_t* mmap_begin (const multiboot_info_t* info)
 {
 	return (const multiboot_memory_map_t*) info->mmap_addr;
@@ -124,8 +93,81 @@ void print_multiboot_info (const multiboot_info_t* info, uint32_t magic)
 	if (info->flags & MULTIBOOT_INFO_BOOT_LOADER_NAME)
 		vga_putline ((const char*) info->boot_loader_name);
 
-	print_multiboot_flags (info);
 	print_multiboot_memmap (info);
+}
+
+
+
+typedef struct vbeptr {
+	uint16_t offset;
+	uint16_t segment;
+} vbeptr;
+
+static inline
+void* decode_vbeptr (vbeptr ptr)
+{
+	return (void*) (((uint32_t) ptr.segment << 4) + ptr.offset);
+}
+
+typedef struct __attribute__ ((packed)) VbeInfoBlock {
+	uint8_t  VbeSignature [4];
+	uint16_t VbeVersion;
+	vbeptr   OemStringPtr;
+	uint8_t  Capabilities [4];
+	vbeptr   VideoModePtr;
+	uint16_t TotalMemory;
+	uint16_t OemSoftwareRev;
+	vbeptr   OemVendorNamePtr;
+	vbeptr   OemProductNamePtr;
+	vbeptr   OemProductRevPtr;
+	uint8_t  Reserved [222];
+	uint8_t  OemData [256];
+} VbeInfoBlock;
+
+void print_vbe_mode (uint16_t mode)
+{
+	char buffer [5];
+	vga_puts ("0x");
+	vga_puts (format_uint (buffer, mode, 4, 16));
+}
+
+void print_vbe_info (const multiboot_info_t* info)
+{
+	if (!(info->flags & MULTIBOOT_INFO_VBE_INFO))
+		return;
+
+	const VbeInfoBlock* vbe_ctlinfo = (const VbeInfoBlock*) info->vbe_control_info;
+	vga_putline ("VBE info:");
+	vga_puts ("  Version: ");
+	char buffer [4] = "0.0";
+	buffer [0] = '0' + (vbe_ctlinfo->VbeVersion >> 8);
+	buffer [2] = '0' + (vbe_ctlinfo->VbeVersion & 0xFF);
+	vga_putline (buffer);
+
+	vga_puts ("  OEM:     ");
+	vga_putline (decode_vbeptr (vbe_ctlinfo->OemStringPtr));
+	vga_puts ("  Vendor:  ");
+	vga_putline (decode_vbeptr (vbe_ctlinfo->OemVendorNamePtr));
+	vga_puts ("  Product: ");
+	vga_puts (decode_vbeptr (vbe_ctlinfo->OemProductNamePtr));
+	vga_puts (" ");
+	vga_putline (decode_vbeptr (vbe_ctlinfo->OemProductRevPtr));
+
+	vga_putline ("Video modes:");
+	uint8_t counter = 0;
+	for (const uint16_t* mode = decode_vbeptr (vbe_ctlinfo->VideoModePtr); *mode != 0xFFFF; ++mode) {
+		if (counter == 0)
+			vga_puts ("  ");
+		else
+			vga_puts (" ");
+		print_vbe_mode (*mode);
+		if (++counter == 10) {
+			counter = 0;
+			vga_putline ("");
+		}
+	}
+	if (counter != 0)
+		vga_putline ("");
 }
 
 void kernel_main (const multiboot_info_t* info, uint32_t magic)
@@ -139,4 +181,6 @@ void kernel_main (const multiboot_info_t* info, uint32_t magic)
 
 	__asm__ ("sti"::);
 	print_multiboot_info (info, magic);
+	print_vbe_info (info);
+
 }
