@@ -161,7 +161,7 @@ void print_vbe_info (const multiboot_info_t* info)
 		else
 			vga_puts (" ");
 		print_vbe_mode (*mode);
-		if (++counter == 10) {
+		if (++counter == 11) {
 			counter = 0;
 			vga_putline ("");
 		}
@@ -169,6 +169,10 @@ void print_vbe_info (const multiboot_info_t* info)
 	if (counter != 0)
 		vga_putline ("");
 }
+
+extern const void _kimage_start;
+extern const void _stack_bottom;
+extern const void _stack_top;
 
 void kernel_main (const multiboot_info_t* info, uint32_t magic)
 {
@@ -180,6 +184,18 @@ void kernel_main (const multiboot_info_t* info, uint32_t magic)
 	IRQ_disable (IRQ_PIT);
 
 	__asm__ ("sti"::);
+	char buffer [9];
+	vga_puts ("kernel start: 0x");
+	vga_putline (format_uint (buffer, (uint32_t) &_kimage_start, 8, 16));
+	vga_puts ("stack bottom: 0x");
+	vga_putline (format_uint (buffer, (uint32_t) &_stack_bottom, 8, 16));
+	vga_puts ("stack top: 0x");
+	vga_putline (format_uint (buffer, (uint32_t) &_stack_top, 8, 16));
+	vga_puts ("multiboot info: 0x");
+	vga_puts (format_uint (buffer, (uint32_t) info, 8, 16));
+	vga_puts ("-0x");
+	vga_putline (format_uint (buffer, (uint32_t) (info + 1) - 1, 8, 16));
+
 	print_multiboot_info (info, magic);
 	print_vbe_info (info);
 }

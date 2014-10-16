@@ -3,7 +3,7 @@ OSNAME = "RDPOS"
 AS = as
 override ASFLAGS:=$(ASFLAGS) -march=i686 --32
 CC = gcc
-override CFLAGS:=$(CFLAGS) -march=i686 -m32 -std=c99 -ffreestanding -Os -Wall -Wextra -Werror
+override CFLAGS:=$(CFLAGS) -march=i686 -m32 -std=gnu99 -ffreestanding -Os -Wall -Wextra -Werror
 LD = ld
 override LDFLAGS:=$(LDFLAGS) -march=i686 -melf_i386 -nostdlib
 
