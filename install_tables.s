@@ -6,6 +6,7 @@ install_GDT: # (const GDT_entry* base, uint16_t entries)
 	sub	$6, %esp
 	movw	12(%ebp), %ax
 	shlw	$3, %ax # Index->offset (sizeof(GDT_entry) == 8)
+	sub     $1, %ax
 	movw	%ax, (%esp)
 	movl	8(%ebp), %eax
 	movl	%eax, 2(%esp)
@@ -22,6 +23,7 @@ install_IDT: # (const IDT_entry* base, uint16_t entries)
 	sub	$6, %esp
 	movw	12(%ebp), %ax
 	shlw	$3, %ax # Index->offset (sizeof(IDT_entry) == 8)
+	sub     $1, %ax
 	movw	%ax, (%esp)
 	movl	8(%ebp), %eax
 	movl	%eax, 2(%esp)
