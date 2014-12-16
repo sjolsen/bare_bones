@@ -1,4 +1,5 @@
 #include "format.h"
+#include "string.h"
 
 static inline
 char digit_to_ascii (uint_fast8_t digit)
@@ -60,6 +61,28 @@ void divmod (uint64_t (*quotient), uint64_t (*remainder),
 
 
 // Extern functions
+
+char* numsep (char* bufstr, char sep)
+{
+	size_t n = strlen (bufstr);
+	size_t m = n + (n - 1)/3;
+	char* src = bufstr + n - 1;
+	char* dst = bufstr + m - 1;
+	for (int i = 0; src != dst;) {
+		if (i == 3) {
+			i = 0;
+			*dst = sep;
+		}
+		else {
+			i = i + 1;
+			*dst = *src;
+			--src;
+		}
+		--dst;
+	}
+	bufstr [m] = '\0';
+	return bufstr;
+}
 
 char* format_int (char* buffer, int64_t value, uint_fast8_t mincol, uint_fast8_t base)
 {

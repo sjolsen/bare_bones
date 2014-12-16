@@ -79,11 +79,11 @@ void print_multiboot_memmap (const multiboot_info_t* info)
 			amemsize += map->len;
 	}
 
-	char buffer [21];
+	char buffer [20 + (20-1)/3 + 1];
 	vga_puts ("  Total ");
-	vga_puts (format_uint (buffer, memsize, 0, 10));
+	vga_puts (numsep (format_uint (buffer, memsize, 0, 10), ','));
 	vga_puts (" bytes (");
-	vga_puts (format_uint (buffer, amemsize, 0, 10));
+	vga_puts (numsep (format_uint (buffer, amemsize, 0, 10), ','));
 	vga_putline (" bytes available)");
 }
 
